@@ -62,7 +62,7 @@ export interface ChatRoom {
  */
 export const getAllChatRooms = async (): Promise<ChatRoom[]> => {
   const response = await api.get('/admin/chat-rooms');
-  return response.data || response.data || [];
+  return response.data || [];
 };
 
 /**

@@ -141,13 +141,4 @@ export const createUser = async (userData: CreateUserData): Promise<any> => {
   return response;
 };
 
-/**
- * Get all users
- */
-export const getAllUsers = async (): Promise<any> => {
-  // Note: This endpoint may need to be created in backend
-  // For now, we'll use a placeholder
-  const response = await api.get('/users');
-  return response;
-};
 

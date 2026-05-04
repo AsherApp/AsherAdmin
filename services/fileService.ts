@@ -21,6 +21,7 @@ export interface Document {
 
 /**
  * Upload file to Cloudinary (for general use)
+ * Backend endpoint: POST /api/file-uploads
  */
 export const uploadFile = async (file: File): Promise<FileUploadResponse> => {
   const formData = new FormData();
@@ -32,6 +33,7 @@ export const uploadFile = async (file: File): Promise<FileUploadResponse> => {
 
 /**
  * Upload multiple files
+ * Backend endpoint: POST /api/file-uploads
  */
 export const uploadFiles = async (files: File[]): Promise<FileUploadResponse[]> => {
   const formData = new FormData();
@@ -54,6 +56,7 @@ const mapCategoryToDocType = (category: string): string => {
 
 /**
  * Upload document to document library (admin endpoint)
+ * Backend endpoint: POST /api/admin/documents (requires ADMIN role)
  */
 export const uploadDocument = async (
   file: File,
@@ -77,49 +80,56 @@ export const uploadDocument = async (
     formData.append('isPublished', String(isPublished));
   }
 
-  // Use admin endpoint instead of landlord endpoint
+  // Use admin endpoint (requires ADMIN role)
   const response = await api.postFormData('/admin/documents', formData);
   return response.data || response.results?.[0];
 };
 
 /**
  * Upload multiple documents
+ * Backend endpoint: POST /api/admin/documents (requires ADMIN role)
+ * Previously used /landlord/documents which requires LANDLORD role
  */
 export const uploadDocuments = async (
   files: File[],
   documentNames: string[],
   docTypes?: string[]
 ): Promise<Document[]> => {
-  const formData = new FormData();
+  // Upload documents one at a time using admin endpoint
+  const results: Document[] = [];
   
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
-  
-  documentNames.forEach((name) => {
-    formData.append('documentName', name);
-  });
-  
-  if (docTypes) {
-    docTypes.forEach((type) => {
-      formData.append('docType', type);
-    });
-  }
+  for (let i = 0; i < files.length; i++) {
+    const formData = new FormData();
+    formData.append('files', files[i]);
+    formData.append('documentName', documentNames[i] || files[i].name);
+    
+    if (docTypes && docTypes[i]) {
+      formData.append('docType', docTypes[i]);
+    }
 
-  const response = await api.postFormData('/landlord/documents', formData);
-  return response.results || response.data || [];
+    const response = await api.postFormData('/admin/documents', formData);
+    const doc = response.data || response.results?.[0];
+    if (doc) results.push(doc);
+  }
+  
+  return results;
 };
 
 /**
  * Get all documents
+ * Backend endpoint: GET /api/admin/documents (requires ADMIN role)
+ * Previously used /landlord/documents/docs which requires LANDLORD role
  */
 export const getDocuments = async (): Promise<Document[]> => {
-  const response = await api.get('/landlord/documents/docs');
+  const response = await api.get('/admin/documents');
   return response.data || response.documents || [];
 };
 
 /**
  * Upload property document
+ * Backend endpoint: POST /api/file-uploads (general upload)
+ * Note: /property-docs route is not mounted in the main index.
+ * Using the general file-uploads endpoint instead.
  */
 export const uploadPropertyDocument = async (
   propertyId: string,
@@ -133,7 +143,7 @@ export const uploadPropertyDocument = async (
   }
   formData.append('propertyId', propertyId);
 
-  const response = await api.postFormData('/property-docs/uploads', formData);
+  // Use general file upload since /property-docs is not mounted
+  const response = await api.postFormData('/file-uploads', formData);
   return response.data || response;
 };
-

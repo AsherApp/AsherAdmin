@@ -28,6 +28,7 @@ export interface NotificationResponse {
 
 /**
  * Get all notifications for the current admin user
+ * Backend endpoint: GET /api/notification/me
  */
 export const getAllNotifications = async (): Promise<NotificationResponse> => {
   try {
@@ -35,12 +36,22 @@ export const getAllNotifications = async (): Promise<NotificationResponse> => {
     const response = await api.get('/notification/me');
     console.log('✅ Notifications response:', response);
     
-    // Backend returns: { notifications: [...], total: number, unreadCount: number }
+    // Backend returns notifications array directly or wrapped
     if (response.notifications) {
       return {
         notifications: Array.isArray(response.notifications) ? response.notifications : [],
         total: response.total || 0,
         unreadCount: response.unreadCount || 0,
+      };
+    }
+    
+    // If response.data contains the notifications
+    if (response.data && Array.isArray(response.data)) {
+      const unread = response.data.filter((n: Notification) => !n.isRead).length;
+      return {
+        notifications: response.data,
+        total: response.data.length,
+        unreadCount: unread,
       };
     }
     
@@ -62,14 +73,12 @@ export const getAllNotifications = async (): Promise<NotificationResponse> => {
 
 /**
  * Get unread notifications only
+ * Backend has no dedicated /unread endpoint, so we filter from /me
  */
 export const getUnreadNotifications = async (): Promise<Notification[]> => {
   try {
-    const response = await api.get('/notification/unread');
-    if (response.notifications) {
-      return Array.isArray(response.notifications) ? response.notifications : [];
-    }
-    return [];
+    const response = await getAllNotifications();
+    return response.notifications.filter(n => !n.isRead);
   } catch (error: any) {
     console.error('Error fetching unread notifications:', error);
     return [];
@@ -78,21 +87,25 @@ export const getUnreadNotifications = async (): Promise<Notification[]> => {
 
 /**
  * Mark a notification as read
+ * Backend endpoint: PATCH /api/notification/:id (general update)
+ * We send { isRead: true } in the body
  */
 export const markAsRead = async (notificationId: string): Promise<Notification> => {
-  const response = await api.patch(`/notification/${notificationId}/read`);
+  const response = await api.patch(`/notification/${notificationId}`, { isRead: true });
   return response;
 };
 
 /**
  * Mark all notifications as read
+ * Backend endpoint: PATCH /api/notification/mark-all-read
  */
 export const markAllAsRead = async (): Promise<void> => {
-  await api.patch('/notification/read-all');
+  await api.patch('/notification/mark-all-read');
 };
 
 /**
  * Delete a notification
+ * Backend endpoint: DELETE /api/notification/:id
  */
 export const deleteNotification = async (notificationId: string): Promise<void> => {
   await api.delete(`/notification/${notificationId}`);
@@ -100,8 +113,25 @@ export const deleteNotification = async (notificationId: string): Promise<void> 
 
 /**
  * Clear all notifications
+ * Deletes notifications one by one since backend has no bulk-delete endpoint.
+ * Falls back to marking all as read if deletion fails.
  */
 export const clearAllNotifications = async (): Promise<void> => {
-  await api.delete('/notification/clear-all');
+  try {
+    // Get all notifications first
+    const { notifications } = await getAllNotifications();
+    
+    // Delete each notification individually
+    const deletePromises = notifications.map(n => 
+      api.delete(`/notification/${n.id}`).catch(() => {
+        // Silently ignore individual delete failures
+      })
+    );
+    
+    await Promise.all(deletePromises);
+  } catch (error) {
+    console.error('Error clearing notifications, falling back to mark-all-read:', error);
+    // Fallback: at least mark them all as read
+    await markAllAsRead();
+  }
 };
-
