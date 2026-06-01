@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, isAuthenticated } from '../services/authService';
-import { AlertCircle, Mail, Lock, Loader } from 'lucide-react';
+import { AlertCircle, Mail, Lock, Loader, Eye, EyeOff } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,10 @@ const Login: React.FC = () => {
 
     try {
       console.log('Attempting login with:', { email }); // Debug log
-      const response = await login({ email, password });
+      const response = await login({
+        email: email.trim().toLowerCase(),
+        password,
+      });
       console.log('Login response received:', response); // Debug log
       
       if (response.success) {
@@ -76,7 +80,7 @@ const Login: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="glass-input w-full pl-12 pr-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="admin@nexusprop.com"
+                  placeholder="admin@ashercorp.co.uk"
                 />
               </div>
             </div>
@@ -90,13 +94,21 @@ const Login: React.FC = () => {
                 <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="glass-input w-full pl-12 pr-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="glass-input w-full pl-12 pr-12 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Enter your password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
             </div>
 

@@ -32,8 +32,23 @@ const getEnvVar = (key: string): string => {
   );
 };
 
+const normalizeApiBaseUrl = (url: string): string => {
+  let normalized = url.trim();
+
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`;
+  }
+
+  normalized = normalized.replace(/\/+$/, '');
+  if (!normalized.endsWith('/api')) {
+    normalized = `${normalized}/api`;
+  }
+
+  return normalized;
+};
+
 // Get API base URL from environment variable
-const API_BASE_URL = getEnvVar('VITE_API_BASE_URL');
+const API_BASE_URL = normalizeApiBaseUrl(getEnvVar('VITE_API_BASE_URL'));
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {
@@ -79,6 +94,16 @@ const refreshAccessToken = async (): Promise<{ accessToken: string; refreshToken
     console.error('Error refreshing token:', error);
     return null;
   }
+};
+
+const getErrorMessage = (error: {
+  message?: string;
+  errors?: string[];
+}): string => {
+  if (Array.isArray(error.errors) && error.errors.length > 0) {
+    return error.errors[0];
+  }
+  return error.message || 'Request failed';
 };
 
 // API Request wrapper with automatic token refresh
@@ -129,7 +154,7 @@ const apiRequest = async (
 
         if (!retryResponse.ok) {
           const error = await retryResponse.json().catch(() => ({ message: 'Request failed' }));
-          throw new Error(error.message || `HTTP error! status: ${retryResponse.status}`);
+          throw new Error(getErrorMessage(error) || `HTTP error! status: ${retryResponse.status}`);
         }
 
         return retryResponse.json();
@@ -146,7 +171,7 @@ const apiRequest = async (
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+      throw new Error(getErrorMessage(error) || `HTTP error! status: ${response.status}`);
     }
 
     // Update tokens from response headers if present

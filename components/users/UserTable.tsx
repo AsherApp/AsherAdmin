@@ -58,11 +58,13 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                     <span className={`px-3 py-1.5 rounded-full text-xs font-bold flex w-fit items-center gap-2 border backdrop-blur-sm ${
                       user.status === 'Active' ? 'bg-green-100/50 text-green-700 border-green-200/50' :
                       user.status === 'Inactive' ? 'bg-gray-100/50 text-gray-600 border-gray-200/50' :
+                      user.status === 'Pending Invite' ? 'bg-red-100/50 text-red-700 border-red-200/50' :
                       'bg-red-100/50 text-red-700 border-red-200/50'
                     }`}>
                       <span className={`w-2 h-2 rounded-full shadow-sm ${
                         user.status === 'Active' ? 'bg-green-500' :
                         user.status === 'Inactive' ? 'bg-gray-400' :
+                        user.status === 'Pending Invite' ? 'bg-red-500' :
                         'bg-red-500'
                       }`}></span>
                       {user.status}

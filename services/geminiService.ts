@@ -1,10 +1,36 @@
 import { GoogleGenAI } from "@google/genai";
 import { Ticket, ChatThread } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getApiKey = (): string | undefined => {
+  const key = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  return key?.trim() || undefined;
+};
+
+let ai: GoogleGenAI | null | undefined;
+
+const getAI = (): GoogleGenAI | null => {
+  if (ai !== undefined) return ai;
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    console.warn(
+      "[Gemini] GEMINI_API_KEY is not set. Add it to .env or .env.local and restart the dev server."
+    );
+    ai = null;
+    return ai;
+  }
+
+  ai = new GoogleGenAI({ apiKey });
+  return ai;
+};
 
 // --- Ticket Analysis ---
 export const analyzeTicketWithAI = async (ticket: Ticket): Promise<{ summary: string; suggestion: string }> => {
+  const client = getAI();
+  if (!client) {
+    return { summary: "Analysis unavailable", suggestion: "Please review manually." };
+  }
+
   try {
     const prompt = `
       Context: Property Management Support System.
@@ -17,7 +43,7 @@ export const analyzeTicketWithAI = async (ticket: Ticket): Promise<{ summary: st
       { "summary": "1 sentence issue summary", "suggestion": "Concise, professional reply draft" }
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: { responseMimeType: "application/json" }
@@ -35,6 +61,9 @@ export const analyzeTicketWithAI = async (ticket: Ticket): Promise<{ summary: st
 
 // --- Chat Smart Replies ---
 export const generateSmartReplies = async (thread: ChatThread): Promise<string[]> => {
+  const client = getAI();
+  if (!client) return [];
+
   try {
     const recentContext = thread.messages.slice(-5).map(m => `${m.senderId === 'me' ? 'Support' : 'User'}: ${m.text}`).join('\n');
     const prompt = `
@@ -46,7 +75,7 @@ export const generateSmartReplies = async (thread: ChatThread): Promise<string[]
       Return JSON: { "replies": ["Reply 1", "Reply 2", "Reply 3"] }
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: { responseMimeType: "application/json" }
@@ -61,6 +90,11 @@ export const generateSmartReplies = async (thread: ChatThread): Promise<string[]
 
 // --- Email Drafter ---
 export const generateEmailDraft = async (subject: string, recipientRole: string): Promise<string> => {
+  const client = getAI();
+  if (!client) {
+    return "<p>AI draft unavailable. Add GEMINI_API_KEY to your .env file.</p>";
+  }
+
   try {
     const prompt = `
       Context: Property Management Email.
@@ -71,7 +105,7 @@ export const generateEmailDraft = async (subject: string, recipientRole: string)
       Keep it under 150 words. No placeholders if possible, infer context from subject.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
     });
@@ -83,6 +117,11 @@ export const generateEmailDraft = async (subject: string, recipientRole: string)
 
 // --- Document Generator ---
 export const generateDocumentTemplate = async (title: string, type: string): Promise<string> => {
+  const client = getAI();
+  if (!client) {
+    return "<h1>Template unavailable</h1><p>Add GEMINI_API_KEY to your .env file to enable AI generation.</p>";
+  }
+
   try {
     const prompt = `
       Context: Property Management Documentation.
@@ -94,7 +133,7 @@ export const generateDocumentTemplate = async (title: string, type: string): Pro
       Make it look like a formal document.
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await client.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
     });

@@ -1,12 +1,24 @@
 import api from '../config/api';
-import { inviteLandlord } from './adminService';
+import {
+  inviteLandlord,
+  resendLandlordInvite,
+  cancelLandlordInvite,
+  setLandlordTempPassword,
+} from './adminService';
 import { CreateUserData } from './authService';
+import { UserProfile } from '../types';
 
 export interface User {
   id: string;
   email: string;
-  role: string[];
-  isVerified: boolean;
+  role: string | string[];
+  isVerified?: boolean;
+  status?: UserProfile['status'];
+  name?: string;
+  systemId?: string;
+  lastActive?: string;
+  phone?: string;
+  ticketsRaised?: number;
   profile?: {
     firstName?: string;
     lastName?: string;
@@ -22,6 +34,18 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+export const mapLandlordToUserProfile = (user: User): UserProfile => ({
+  id: user.id,
+  name: user.name || user.email.split('@')[0],
+  email: user.email,
+  role: typeof user.role === 'string' ? user.role : 'Landlord',
+  systemId: user.systemId || '4',
+  status: user.status || (user.isVerified ? 'Active' : 'Pending Invite'),
+  lastActive: user.lastActive || 'Invitation sent',
+  phone: user.phone || user.profile?.phoneNumber || '',
+  ticketsRaised: user.ticketsRaised || 0,
+});
 
 /**
  * Get user by ID
@@ -41,7 +65,7 @@ export const inviteLandlordForFE = async (userData: {
   firstName?: string;
   lastName?: string;
   phoneNumber?: string;
-}): Promise<{ userId: string; email: string; invitationLink?: string }> => {
+}): Promise<{ userId: string; email: string; invitationLink?: string; emailSent?: boolean; emailError?: string }> => {
   const response = await inviteLandlord(userData);
   return response.data || response;
 };
@@ -73,7 +97,7 @@ export const getAllLandlords = async (page: number = 1, limit: number = 50, sear
     // Backend returns: { success: true, data: [...], total: number, page: number, limit: number }
     if (response.success && response.data) {
       return {
-        data: Array.isArray(response.data) ? response.data : [],
+        data: (Array.isArray(response.data) ? response.data : []).map(mapLandlordToUserProfile),
         total: response.total || response.data?.length || 0,
         page: response.page || page,
         limit: response.limit || limit,
@@ -81,8 +105,9 @@ export const getAllLandlords = async (page: number = 1, limit: number = 50, sear
     }
     
     // Fallback if structure is different
+    const fallbackData = Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : [];
     return {
-      data: Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : [],
+      data: fallbackData.map(mapLandlordToUserProfile),
       total: response.total || 0,
       page: response.page || page,
       limit: response.limit || limit,
@@ -103,10 +128,12 @@ export const getAllLandlords = async (page: number = 1, limit: number = 50, sear
 export const getAllUsers = async (): Promise<User[]> => {
   try {
     const { data } = await getAllLandlords(1, 1000);
-    return data;
+    return data as unknown as User[];
   } catch (error) {
     console.error('Error fetching users:', error);
     return [];
   }
 };
+
+export { resendLandlordInvite, cancelLandlordInvite, setLandlordTempPassword };
 

@@ -11,6 +11,7 @@ import EmailSystem from './components/EmailSystem';
 import Settings from './components/Settings';
 import SupportContent from './components/SupportContent';
 import Login from './pages/Login';
+import SetPassword from './pages/SetPassword';
 import { Menu, Bell, CheckCircle, AlertTriangle, Info, MessageCircle } from 'lucide-react';
 import { AppNotification } from './types';
 import { isAuthenticated } from './services/authService';
@@ -278,6 +279,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/set-password" element={<SetPassword />} />
         <Route
           path="/*"
           element={

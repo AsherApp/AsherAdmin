@@ -3,10 +3,16 @@ import React, { useState } from 'react';
 import { UserProfile, Ticket, TicketStatus, TicketPriority } from '../../types';
 import { 
   Mail, Phone, Clock, KeyRound, Ticket as TicketIcon, MessageSquare, Shield, X, 
-  Clock as ClockIcon, ChevronRight, AlertCircle, Plus, Save
+  Clock as ClockIcon, ChevronRight, AlertCircle, Plus, Save, Copy, Check,
+  RefreshCw, Trash2, Link2, Loader, Eye, EyeOff
 } from 'lucide-react';
 import { getSystemDetails, getPriorityColor, getStatusColor } from '../../utils/uiHelpers';
 import TicketDetailModal from '../tickets/TicketDetailModal';
+import {
+  resendLandlordInvite,
+  cancelLandlordInvite,
+  setLandlordTempPassword,
+} from '../../services/userService';
 
 // Mock Ticket Data for Drill-down
 const mockUserTickets: Ticket[] = [
@@ -44,9 +50,22 @@ interface UserDetailModalProps {
 }
 
 const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpdate, onDelete }) => {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'messages' | 'settings'>('tickets');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'messages' | 'settings'>(
+    user.status === 'Pending Invite' ? 'settings' : 'tickets'
+  );
   const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
   const [userTickets, setUserTickets] = useState<Ticket[]>(mockUserTickets);
+
+  const [invitationLink, setInvitationLink] = useState('');
+  const [tempPassword, setTempPassword] = useState('');
+  const [showTempPassword, setShowTempPassword] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState<'resend' | 'link' | 'temp' | 'cancel' | null>(null);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  const isPendingInvite = user.status === 'Pending Invite';
 
   // Create Ticket State
   const [showCreateTicket, setShowCreateTicket] = useState(false);
@@ -78,6 +97,94 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     setNewTicketData({ subject: '', description: '', priority: TicketPriority.MEDIUM });
   };
 
+  const handleResendInvite = async () => {
+    setInviteLoading('resend');
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const response = await resendLandlordInvite(user.id, true);
+      const data = response.data?.data || response.data || response;
+      setInvitationLink(data.invitationLink || '');
+      setInviteMessage(
+        data.emailSent
+          ? 'Invitation email resent successfully.'
+          : 'Email could not be sent. Copy the invitation link below instead.'
+      );
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to resend invitation email');
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    setInviteLoading('link');
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const response = await resendLandlordInvite(user.id, false);
+      const data = response.data?.data || response.data || response;
+      setInvitationLink(data.invitationLink || '');
+      setInviteMessage('Invitation link generated. Copy and share it directly.');
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to generate invitation link');
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  const handleSetTempPassword = async () => {
+    if (tempPassword.length < 8) {
+      setInviteError('Temporary password must be at least 8 characters.');
+      return;
+    }
+
+    setInviteLoading('temp');
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const response = await setLandlordTempPassword(user.id, tempPassword);
+      setInviteMessage(response.message || 'Temporary password set successfully.');
+      onUpdate({ status: 'Active', lastActive: 'Ready to log in' });
+      setTempPassword('');
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to set temporary password');
+    } finally {
+      setInviteLoading(null);
+    }
+  };
+
+  const handleCancelInvite = async () => {
+    if (!window.confirm(`Cancel the invite for ${user.email}? This will remove the user from the directory.`)) {
+      return;
+    }
+
+    setInviteLoading('cancel');
+    setInviteError('');
+    try {
+      await cancelLandlordInvite(user.id);
+      onDelete();
+      onClose();
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to cancel invitation');
+      setInviteLoading(null);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (!invitationLink) return;
+    navigator.clipboard.writeText(invitationLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleCopyTempPassword = () => {
+    if (!tempPassword) return;
+    navigator.clipboard.writeText(tempPassword);
+    setCopiedPassword(true);
+    setTimeout(() => setCopiedPassword(false), 2000);
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -99,8 +206,19 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                   <div className="flex items-center gap-3 text-sm font-medium bg-white/20 p-3 rounded-xl border border-white/30"><Clock size={16} className="text-red-600"/> <span>{user.lastActive}</span></div>
                </div>
             </div>
-            <div className="mt-auto p-6 border-t border-white/20 bg-white/5">
-               <button className="w-full py-2.5 bg-white/30 hover:bg-white/50 border border-white/40 rounded-xl text-sm font-bold text-gray-700 flex items-center justify-center gap-2 backdrop-blur-sm"><KeyRound size={16} /> Reset Password</button>
+            <div className="mt-auto p-6 border-t border-white/20 bg-white/5 space-y-3">
+               {isPendingInvite ? (
+                 <button
+                   onClick={() => setActiveTab('settings')}
+                   className="w-full py-2.5 bg-red-50/80 hover:bg-red-100/80 border border-red-200/40 rounded-xl text-sm font-bold text-red-700 flex items-center justify-center gap-2 backdrop-blur-sm"
+                 >
+                   <Mail size={16} /> Manage Invitation
+                 </button>
+               ) : (
+                 <button className="w-full py-2.5 bg-white/30 hover:bg-white/50 border border-white/40 rounded-xl text-sm font-bold text-gray-700 flex items-center justify-center gap-2 backdrop-blur-sm">
+                   <KeyRound size={16} /> Reset Password
+                 </button>
+               )}
             </div>
           </div>
 
@@ -204,6 +322,129 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                )}
                {activeTab === 'settings' && (
                  <div className="max-w-2xl space-y-6">
+                    {isPendingInvite && (
+                      <div className="p-6 rounded-2xl border border-amber-200/50 shadow-lg backdrop-blur-md bg-amber-50/20">
+                        <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2 text-lg">
+                          <Mail size={20} className="text-amber-600" /> Pending Invitation
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          This user has not activated their account on the{' '}
+                          <a href="https://asher-dev.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                            Rent Management System
+                          </a>{' '}
+                          yet. Resend the email, share a direct link, or set a temporary password they can use to log in at asher-dev.vercel.app.
+                        </p>
+
+                        {inviteError && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                            <AlertCircle size={16} className="text-red-600" />
+                            <p className="text-sm text-red-700">{inviteError}</p>
+                          </div>
+                        )}
+
+                        {inviteMessage && (
+                          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+                            <p className="text-sm text-green-700">{inviteMessage}</p>
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap gap-3">
+                            <button
+                              onClick={handleResendInvite}
+                              disabled={inviteLoading !== null}
+                              className="px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {inviteLoading === 'resend' ? <Loader className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+                              Resend Email
+                            </button>
+                            <button
+                              onClick={handleGenerateLink}
+                              disabled={inviteLoading !== null}
+                              className="px-4 py-2.5 bg-white/60 border border-white/60 rounded-xl text-sm font-bold text-gray-700 flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {inviteLoading === 'link' ? <Loader className="animate-spin" size={16} /> : <Link2 size={16} />}
+                              Get Invite Link
+                            </button>
+                          </div>
+
+                          {invitationLink && (
+                            <div className="p-4 rounded-xl bg-white/40 border border-white/50">
+                              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Invitation Link</label>
+                              <div className="flex gap-2">
+                                <input
+                                  readOnly
+                                  value={invitationLink}
+                                  className="glass-input flex-1 p-3 rounded-xl text-xs font-medium bg-white/50"
+                                />
+                                <button
+                                  onClick={handleCopyLink}
+                                  className="p-3 bg-white/60 border border-white/50 rounded-xl text-gray-600 hover:text-red-600"
+                                >
+                                  {copiedLink ? <Check size={18} className="text-green-600" /> : <Copy size={18} />}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="p-4 rounded-xl bg-white/40 border border-white/50 space-y-3">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">Set Temporary Password</label>
+                            <p className="text-xs text-gray-500">Give the user a password to log in at asher-dev.vercel.app if email delivery fails. They can change it after signing in.</p>
+                            <div className="relative">
+                              <input
+                                type={showTempPassword ? 'text' : 'password'}
+                                value={tempPassword}
+                                onChange={(e) => setTempPassword(e.target.value)}
+                                placeholder="Minimum 8 characters"
+                                className="glass-input w-full p-3 pr-24 rounded-xl text-sm bg-white/50"
+                              />
+                              <div className="absolute right-2 top-2 flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowTempPassword((prev) => !prev)}
+                                  className="p-2 text-gray-400 hover:text-gray-600"
+                                >
+                                  {showTempPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                                {tempPassword && (
+                                  <button
+                                    type="button"
+                                    onClick={handleCopyTempPassword}
+                                    className="p-2 text-gray-400 hover:text-gray-600"
+                                  >
+                                    {copiedPassword ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={handleSetTempPassword}
+                              disabled={inviteLoading !== null || tempPassword.length < 8}
+                              className="px-4 py-2.5 bg-gray-800 text-white rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {inviteLoading === 'temp' ? <Loader className="animate-spin" size={16} /> : <KeyRound size={16} />}
+                              Set Temp Password
+                            </button>
+                          </div>
+
+                          <div className="p-4 rounded-xl border border-red-200/50 bg-red-50/20 flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-bold text-red-800">Cancel Invitation</p>
+                              <p className="text-xs text-red-600 mt-1">Remove this pending user from the directory.</p>
+                            </div>
+                            <button
+                              onClick={handleCancelInvite}
+                              disabled={inviteLoading !== null}
+                              className="px-4 py-2.5 bg-white border border-red-200 text-red-700 rounded-xl text-sm font-bold flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {inviteLoading === 'cancel' ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                              Cancel Invite
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="p-6 rounded-2xl border border-red-200/40 shadow-lg backdrop-blur-md bg-red-50/20">
                        <h3 className="font-bold text-red-900 mb-6 flex items-center gap-2 text-lg"><Shield size={20} className="text-red-600" /> Administrative Actions</h3>
                        <div className="flex items-center justify-between p-4 border border-red-100/40 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">

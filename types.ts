@@ -81,7 +81,7 @@ export interface UserProfile {
   email: string;
   role: string;
   systemId: string; // The primary system they belong to
-  status: 'Active' | 'Inactive' | 'Suspended';
+  status: 'Active' | 'Inactive' | 'Suspended' | 'Pending Invite';
   lastActive: string;
   avatarUrl?: string;
   phone?: string;

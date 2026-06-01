@@ -14,6 +14,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [form, setForm] = useState({ name: '', email: '', system: '4', role: 'Landlord' }); // Default to Rent Mgmt Sys and Landlord
   const [invitationLink, setInvitationLink] = useState('');
+  const [emailSent, setEmailSent] = useState(true);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,6 +64,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
       onAdd(newUser);
       setCreatedUserId(response.userId);
       setInvitationLink(response.invitationLink || '');
+      setEmailSent(response.emailSent !== false);
       setStep('success');
     } catch (err: any) {
       setError(err.message || 'Failed to invite landlord. Please try again.');
@@ -106,7 +108,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
                   <select value={form.system} onChange={(e) => setForm({...form, system: e.target.value})} className="glass-input w-full p-3 rounded-xl text-sm font-medium appearance-none bg-white/30 cursor-pointer" disabled>
                     <option value="4">Rent Mgmt System</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Only Rent Mgmt System available</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Creates a landlord account on{' '}
+                    <a href="https://asher-dev.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      asher-dev.vercel.app
+                    </a>
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Role</label>
@@ -146,24 +153,56 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
               <div className="w-16 h-16 bg-green-100/50 rounded-full flex items-center justify-center text-green-600 mb-4 shadow-lg border border-green-200/50 backdrop-blur-md"><CheckCircle size={32} /></div>
               <h4 className="text-xl font-bold text-gray-800 mb-2">Invitation Sent!</h4>
               <p className="text-sm text-gray-600 font-medium max-w-xs mb-8 leading-relaxed">
-                An invitation email has been sent to <b>{form.email}</b> to join the Rent Management System as a Landlord.
-                <br /><br />
-                They will receive an email with a link to set their password and complete account setup.
+                {emailSent ? (
+                  <>
+                    An invitation email has been sent to <b>{form.email}</b> for the{' '}
+                    <b>Rent Management System</b> (AsherLandlordFE).
+                    <br /><br />
+                    They will set their password at{' '}
+                    <a href="https://asher-dev.vercel.app/set-password" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      asher-dev.vercel.app
+                    </a>{' '}
+                    and log in there — not on this admin panel.
+                    <br /><br />
+                    Ask them to check inbox and spam. Email is sent from <b>admin@ashercorp.co.uk</b>.
+                  </>
+                ) : (
+                  <>
+                    The landlord account was created for <b>{form.email}</b>, but the email could not be delivered.
+                    <br /><br />
+                    Copy the invitation link below and send it to them manually.
+                  </>
+                )}
               </p>
               {invitationLink && (
                 <div className="w-full mb-6">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 text-left">Invitation Link (for testing)</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 text-left">
+                    {emailSent ? 'Invitation Link (backup copy)' : 'Invitation Link (send manually)'}
+                  </label>
                   <div className="flex gap-2">
                     <div className="glass-input flex-1 p-3 rounded-xl text-sm font-medium bg-white/40 text-gray-600 truncate border border-white/50">{invitationLink}</div>
                     <button onClick={handleCopy} className="p-3 bg-white/50 hover:bg-white/80 border border-white/50 rounded-xl text-gray-600 hover:text-red-600 transition shadow-sm">{copied ? <Check size={20} className="text-green-600" /> : <Copy size={20} />}</button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Note: User will receive this link via email automatically</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {emailSent
+                      ? 'If they do not receive the email, share this link directly.'
+                      : 'Email delivery failed, so this link must be shared manually.'}
+                  </p>
                 </div>
               )}
-              <div className="w-full p-4 bg-green-50/50 border border-green-200/50 rounded-xl">
-                <p className="text-sm text-green-700 font-medium">
-                  ✅ Invitation email sent successfully!<br />
-                  The user will receive instructions to set their password.
+              <div className={`w-full p-4 border rounded-xl ${emailSent ? 'bg-green-50/50 border-green-200/50' : 'bg-amber-50/50 border-amber-200/50'}`}>
+                <p className={`text-sm font-medium ${emailSent ? 'text-green-700' : 'text-amber-800'}`}>
+                  {emailSent ? (
+                    <>
+                      Invitation email sent successfully.<br />
+                      If it is not in the inbox, check spam or promotions.
+                    </>
+                  ) : (
+                    <>
+                      Account created, but email was not delivered.<br />
+                      Use the invitation link above instead.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
