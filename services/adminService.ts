@@ -47,6 +47,13 @@ export const cancelLandlordInvite = async (userId: string): Promise<{
   return api.delete(`/admin/landlords/${userId}/invite`);
 };
 
+export const deleteLandlordAccount = async (userId: string): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  return api.delete(`/admin/landlords/${userId}`);
+};
+
 export const setLandlordTempPassword = async (
   userId: string,
   tempPassword: string

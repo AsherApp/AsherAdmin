@@ -110,8 +110,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     Creates a landlord account on{' '}
-                    <a href="https://asher-dev.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
-                      asher-dev.vercel.app
+                    <a href="https://asherlanlord.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      asherlanlord.vercel.app
                     </a>
                   </p>
                 </div>
@@ -159,8 +159,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
                     <b>Rent Management System</b> (AsherLandlordFE).
                     <br /><br />
                     They will set their password at{' '}
-                    <a href="https://asher-dev.vercel.app/set-password" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
-                      asher-dev.vercel.app
+                    <a href="https://asherlanlord.vercel.app/set-password" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      asherlanlord.vercel.app
                     </a>{' '}
                     and log in there — not on this admin panel.
                     <br /><br />

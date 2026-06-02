@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import { UserProfile, Ticket, TicketStatus, TicketPriority } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserProfile, Ticket, TicketPriority } from '../../types';
 import { 
-  Mail, Phone, Clock, KeyRound, Ticket as TicketIcon, MessageSquare, Shield, X, 
+  Mail, Phone, Clock, KeyRound, MessageSquare, Shield, X, 
   Clock as ClockIcon, ChevronRight, AlertCircle, Plus, Save, Copy, Check,
   RefreshCw, Trash2, Link2, Loader, Eye, EyeOff
 } from 'lucide-react';
@@ -11,36 +11,14 @@ import TicketDetailModal from '../tickets/TicketDetailModal';
 import {
   resendLandlordInvite,
   cancelLandlordInvite,
+  deleteLandlordAccount,
   setLandlordTempPassword,
 } from '../../services/userService';
-
-// Mock Ticket Data for Drill-down
-const mockUserTickets: Ticket[] = [
-  { 
-    id: 'NET-1024', 
-    sourceSystemId: '1', 
-    subject: 'Cannot login to Tenant Portal', 
-    description: 'I keep getting error 500 whenever I try to access the payment history tab on my iPhone.', 
-    user: 'Sarah Jenkins', 
-    userId: 'u1', 
-    status: TicketStatus.OPEN, 
-    priority: TicketPriority.HIGH, 
-    createdAt: '2023-10-27T10:00:00Z', 
-    messages: [{id:'m1', sender:'User', text:'Help please', timestamp:'10:00'}] 
-  },
-  { 
-    id: 'NET-1099', 
-    sourceSystemId: '1', 
-    subject: 'Lease renewal question', 
-    description: 'Where do I sign the new lease document sent to my email? The link seems broken.', 
-    user: 'Sarah Jenkins', 
-    userId: 'u1', 
-    status: TicketStatus.RESOLVED, 
-    priority: TicketPriority.LOW, 
-    createdAt: '2023-10-15T09:00:00Z', 
-    messages: [] 
-  }
-];
+import {
+  getTicketsByUserId,
+  createTicket,
+  mapApiTicketToUiTicket,
+} from '../../services/ticketService';
 
 interface UserDetailModalProps {
   user: UserProfile;
@@ -54,12 +32,15 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     user.status === 'Pending Invite' ? 'settings' : 'tickets'
   );
   const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
-  const [userTickets, setUserTickets] = useState<Ticket[]>(mockUserTickets);
+  const [userTickets, setUserTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketsError, setTicketsError] = useState('');
+  const [creatingTicket, setCreatingTicket] = useState(false);
 
   const [invitationLink, setInvitationLink] = useState('');
   const [tempPassword, setTempPassword] = useState('');
   const [showTempPassword, setShowTempPassword] = useState(false);
-  const [inviteLoading, setInviteLoading] = useState<'resend' | 'link' | 'temp' | 'cancel' | null>(null);
+  const [inviteLoading, setInviteLoading] = useState<'resend' | 'link' | 'temp' | 'cancel' | 'delete' | null>(null);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -71,30 +52,65 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const [showCreateTicket, setShowCreateTicket] = useState(false);
   const [newTicketData, setNewTicketData] = useState({ subject: '', description: '', priority: TicketPriority.MEDIUM });
 
+  const loadUserTickets = useCallback(async () => {
+    if (user.status === 'Pending Invite') {
+      setUserTickets([]);
+      return;
+    }
+
+    setTicketsLoading(true);
+    setTicketsError('');
+    try {
+      const response = await getTicketsByUserId(user.id);
+      const mapped = response.data.map((t) =>
+        mapApiTicketToUiTicket(t, user.systemId || '4')
+      );
+      setUserTickets(mapped);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to load ticket history';
+      setTicketsError(message);
+      setUserTickets([]);
+    } finally {
+      setTicketsLoading(false);
+    }
+  }, [user.id, user.status, user.systemId]);
+
+  useEffect(() => {
+    if (activeTab === 'tickets') {
+      loadUserTickets();
+    }
+  }, [activeTab, loadUserTickets]);
+
   const handleTicketUpdate = (updatedTicket: Ticket) => {
     setUserTickets(userTickets.map(t => t.id === updatedTicket.id ? updatedTicket : t));
     setViewingTicket(updatedTicket);
   };
 
-  const handleCreateTicket = () => {
+  const handleCreateTicket = async () => {
     if (!newTicketData.subject || !newTicketData.description) return;
 
-    const newTicket: Ticket = {
-      id: `NET-${Math.floor(Math.random() * 10000)}`,
-      sourceSystemId: user.systemId,
-      subject: newTicketData.subject,
-      description: newTicketData.description,
-      user: user.name,
-      userId: user.id,
-      status: TicketStatus.OPEN,
-      priority: newTicketData.priority,
-      createdAt: new Date().toISOString(),
-      messages: []
-    };
-
-    setUserTickets([newTicket, ...userTickets]);
-    setShowCreateTicket(false);
-    setNewTicketData({ subject: '', description: '', priority: TicketPriority.MEDIUM });
+    setCreatingTicket(true);
+    setTicketsError('');
+    try {
+      const created = await createTicket({
+        subject: newTicketData.subject,
+        description: newTicketData.description,
+        type: 'SUPPORT',
+        priority: newTicketData.priority,
+        raisedByUserId: user.id,
+      });
+      const mapped = mapApiTicketToUiTicket(created, user.systemId || '4');
+      setUserTickets((prev) => [mapped, ...prev]);
+      setShowCreateTicket(false);
+      setNewTicketData({ subject: '', description: '', priority: TicketPriority.MEDIUM });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to create ticket';
+      setTicketsError(message);
+    } finally {
+      setCreatingTicket(false);
+    }
   };
 
   const handleResendInvite = async () => {
@@ -167,6 +183,28 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
       onClose();
     } catch (err: any) {
       setInviteError(err.message || 'Failed to cancel invitation');
+      setInviteLoading(null);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        `Permanently delete ${user.name}'s account (${user.email})?\n\nThis removes the user from the directory and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setInviteLoading('delete');
+    setInviteError('');
+    try {
+      const response = await deleteLandlordAccount(user.id);
+      setInviteMessage(response.message || 'Account deleted successfully.');
+      onDelete();
+      onClose();
+    } catch (err: any) {
+      setInviteError(err.message || 'Failed to delete account');
       setInviteLoading(null);
     }
   };
@@ -248,6 +286,13 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                      </div>
 
                      {/* Inline Create Ticket Form */}
+                     {ticketsError && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                          <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+                          <p className="text-sm text-red-700">{ticketsError}</p>
+                        </div>
+                     )}
+
                      {showCreateTicket && (
                         <div className="p-5 rounded-2xl bg-white/40 border border-red-200/50 shadow-lg mb-6 animate-in fade-in slide-in-from-top-2 backdrop-blur-sm">
                            <h4 className="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2"><Plus size={16} className="text-red-600"/> New Ticket for {user.name}</h4>
@@ -278,23 +323,42 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                                  </div>
                                  <button 
                                    onClick={handleCreateTicket}
-                                   className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-md hover:bg-red-700 transition"
+                                   disabled={creatingTicket}
+                                   className="bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-md hover:bg-red-700 transition disabled:opacity-50"
                                  >
-                                   <Save size={14}/> Save Ticket
+                                   {creatingTicket ? (
+                                     <><Loader size={14} className="animate-spin" /> Saving...</>
+                                   ) : (
+                                     <><Save size={14}/> Save Ticket</>
+                                   )}
                                  </button>
                               </div>
                            </div>
                         </div>
                      )}
 
-                     {userTickets.map(t => {
+                     {ticketsLoading && (
+                        <div className="flex items-center justify-center py-12 text-gray-500">
+                          <Loader className="animate-spin text-red-600 mr-2" size={20} />
+                          <span className="text-sm font-medium">Loading tickets...</span>
+                        </div>
+                     )}
+
+                     {!ticketsLoading && userTickets.length === 0 && (
+                        <div className="text-center py-12 text-gray-500">
+                          <p className="text-sm font-medium">No support tickets for this user yet.</p>
+                          <p className="text-xs mt-1 text-gray-400">Create one with the button above.</p>
+                        </div>
+                     )}
+
+                     {!ticketsLoading && userTickets.map(t => {
                         const sys = getSystemDetails(t.sourceSystemId);
                         const SysIcon = sys.icon;
                         return (
                         <div key={t.id} onClick={() => setViewingTicket(t)} className="p-5 rounded-2xl hover:bg-white/40 cursor-pointer border border-white/40 shadow-sm bg-white/20 backdrop-blur-md group transition-all hover:scale-[1.01]">
                            <div className="flex justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                 <span className="font-mono text-[10px] font-bold text-gray-400 bg-white/50 px-1.5 py-0.5 rounded">{t.id}</span>
+                                 <span className="font-mono text-[10px] font-bold text-gray-400 bg-white/50 px-1.5 py-0.5 rounded">{t.ticketCode || t.id}</span>
                                  <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${sys.color} border-opacity-20`}>
                                     <SysIcon size={10} />
                                     <span className="truncate max-w-[80px]">{sys.name}</span>
@@ -322,6 +386,13 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                )}
                {activeTab === 'settings' && (
                  <div className="max-w-2xl space-y-6">
+                    {!isPendingInvite && inviteError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+                        <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+                        <p className="text-sm text-red-700">{inviteError}</p>
+                      </div>
+                    )}
+
                     {isPendingInvite && (
                       <div className="p-6 rounded-2xl border border-amber-200/50 shadow-lg backdrop-blur-md bg-amber-50/20">
                         <h3 className="font-bold text-amber-900 mb-2 flex items-center gap-2 text-lg">
@@ -329,10 +400,10 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                         </h3>
                         <p className="text-sm text-gray-600 mb-6">
                           This user has not activated their account on the{' '}
-                          <a href="https://asher-dev.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                          <a href="https://asherlanlord.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
                             Rent Management System
                           </a>{' '}
-                          yet. Resend the email, share a direct link, or set a temporary password they can use to log in at asher-dev.vercel.app.
+                          yet. Resend the email, share a direct link, or set a temporary password they can use to log in at asherlanlord.vercel.app.
                         </p>
 
                         {inviteError && (
@@ -389,7 +460,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
 
                           <div className="p-4 rounded-xl bg-white/40 border border-white/50 space-y-3">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">Set Temporary Password</label>
-                            <p className="text-xs text-gray-500">Give the user a password to log in at asher-dev.vercel.app if email delivery fails. They can change it after signing in.</p>
+                            <p className="text-xs text-gray-500">Give the user a password to log in at asherlanlord.vercel.app if email delivery fails. They can change it after signing in.</p>
                             <div className="relative">
                               <input
                                 type={showTempPassword ? 'text' : 'password'}
@@ -447,9 +518,30 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
 
                     <div className="p-6 rounded-2xl border border-red-200/40 shadow-lg backdrop-blur-md bg-red-50/20">
                        <h3 className="font-bold text-red-900 mb-6 flex items-center gap-2 text-lg"><Shield size={20} className="text-red-600" /> Administrative Actions</h3>
-                       <div className="flex items-center justify-between p-4 border border-red-100/40 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
-                          <div><p className="text-sm font-bold text-gray-800">Suspend Account</p><p className="text-xs text-gray-500 mt-1">Temporarily disable access.</p></div>
-                          <button onClick={() => onUpdate({status: user.status === 'Active' ? 'Suspended' : 'Active'})} className="px-4 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 bg-white/50">{user.status === 'Active' ? 'Suspend' : 'Activate'}</button>
+                       <div className="space-y-4">
+                         <div className="flex items-center justify-between p-4 border border-red-100/40 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
+                            <div><p className="text-sm font-bold text-gray-800">Suspend Account</p><p className="text-xs text-gray-500 mt-1">Temporarily disable access.</p></div>
+                            <button onClick={() => onUpdate({status: user.status === 'Active' ? 'Suspended' : 'Active'})} className="px-4 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 bg-white/50">{user.status === 'Active' ? 'Suspend' : 'Activate'}</button>
+                         </div>
+
+                         {!isPendingInvite && (
+                           <div className="flex items-center justify-between p-4 border border-red-200/50 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
+                             <div>
+                               <p className="text-sm font-bold text-red-800">Delete Account</p>
+                               <p className="text-xs text-gray-500 mt-1">
+                                 Permanently remove this landlord from the directory. Only available when they have no properties or tenants.
+                               </p>
+                             </div>
+                             <button
+                               onClick={handleDeleteAccount}
+                               disabled={inviteLoading !== null}
+                               className="px-4 py-2 rounded-lg text-xs font-bold border border-red-300 text-red-700 hover:bg-red-50 bg-white/50 flex items-center gap-2 disabled:opacity-50"
+                             >
+                               {inviteLoading === 'delete' ? <Loader className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                               Delete
+                             </button>
+                           </div>
+                         )}
                        </div>
                     </div>
                  </div>

@@ -6,7 +6,12 @@ import { getSystemDetails } from '../utils/uiHelpers';
 import TicketTable from './tickets/TicketTable';
 import TicketKanban from './tickets/TicketKanban';
 import TicketDetailModal from './tickets/TicketDetailModal';
-import { getAllTickets, updateTicketStatus, createTicket, Ticket as ApiTicket } from '../services/ticketService';
+import {
+  getAllTickets,
+  updateTicketStatus,
+  createTicket,
+  mapApiTicketToUiTicket,
+} from '../services/ticketService';
 
 const TicketSystem: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -47,48 +52,7 @@ const TicketSystem: React.FC = () => {
         return;
       }
       
-      // Map API tickets to component Ticket format
-      const mappedTickets: Ticket[] = response.data.map((t: ApiTicket) => {
-        // Extract user name from nested structure
-        const userName = t.raisedBy?.user?.profile?.fullname 
-          || (t.raisedBy?.user?.profile?.firstName && t.raisedBy?.user?.profile?.lastName
-            ? `${t.raisedBy.user.profile.firstName} ${t.raisedBy.user.profile.lastName}`.trim()
-            : t.raisedBy?.user?.profile?.firstName
-            || t.raisedByTenant?.user?.profile?.fullname
-            || (t.raisedByTenant?.user?.profile?.firstName && t.raisedByTenant?.user?.profile?.lastName
-              ? `${t.raisedByTenant.user.profile.firstName} ${t.raisedByTenant.user.profile.lastName}`.trim()
-              : t.raisedByTenant?.user?.profile?.firstName
-              || t.raisedByTenant?.tenantWebUserEmail
-              || t.raisedBy?.user?.email
-              || 'Unknown'));
-
-        // Map messages from backend to frontend format
-        const mappedMessages = (t.messages || []).map((msg: any) => ({
-          id: msg.id,
-          sender: msg.sender?.profile?.fullname || msg.sender?.email || 'Support',
-          text: msg.content,
-          timestamp: new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-        }));
-
-        return {
-          id: t.id,
-          ticketCode: t.ticketCode || t.id, // Use ticketCode if available, fallback to id
-          sourceSystemId: '4', // Rent Mgmt System
-          subject: t.subject,
-          description: t.description,
-          user: userName,
-          userId: t.raisedById || t.raisedByTenantId || '',
-          status: (t.status === 'OPEN' || t.status === 'IN_PROGRESS' || t.status === 'RESOLVED' || t.status === 'CLOSED')
-            ? t.status as TicketStatus
-            : TicketStatus.OPEN, // Default fallback
-          priority: (t.priority === 'HIGH' || t.priority === 'MEDIUM' || t.priority === 'LOW' || t.priority === 'PENDING')
-            ? t.priority as TicketPriority
-            : TicketPriority.PENDING, // Default fallback
-          createdAt: t.createdAt,
-          messages: mappedMessages,
-        };
-      });
-      console.log('✅ TicketSystem: Mapped tickets:', { count: mappedTickets.length });
+      const mappedTickets = response.data.map((t) => mapApiTicketToUiTicket(t, '4'));
       setTickets(mappedTickets);
     } catch (error) {
       console.error('❌ TicketSystem: Error loading tickets:', error);

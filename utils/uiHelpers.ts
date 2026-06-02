@@ -13,7 +13,7 @@ export const getSystemDetails = (id: string) => {
       shortName: 'Rent Mgmt',
       icon: Server,
       color: 'text-orange-600 bg-orange-100',
-      url: 'https://asher-dev.vercel.app',
+      url: 'https://asherlanlord.vercel.app',
     };
     case '5': return { name: 'Admin Dash', shortName: 'Admin', icon: Server, color: 'text-gray-600 bg-gray-100', url: '' };
     default: return { name: 'Unknown', shortName: 'Unknown', icon: AlertCircle, color: 'text-gray-400 bg-gray-100', url: '' };
