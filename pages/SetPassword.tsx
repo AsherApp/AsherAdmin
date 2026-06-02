@@ -57,7 +57,7 @@ const SetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 p-4">
+    <div className="min-h-full h-full flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-50 p-6">
       <div className="w-full max-w-md">
         <div className="glass-panel p-8 rounded-3xl shadow-2xl border border-white/60">
           <div className="text-center mb-8">

@@ -148,7 +148,7 @@ const DashboardLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex font-sans text-slate-800 selection:bg-red-200 selection:text-red-900 relative overflow-x-hidden">
+    <div className="min-h-full h-full flex font-sans text-slate-800 selection:bg-red-200 selection:text-red-900 relative overflow-x-hidden">
       <Sidebar 
         currentTab={currentTab} 
         setCurrentTab={setCurrentTab} 

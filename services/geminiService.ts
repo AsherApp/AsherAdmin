@@ -14,7 +14,7 @@ const getAI = (): GoogleGenAI | null => {
   const apiKey = getApiKey();
   if (!apiKey) {
     console.warn(
-      "[Gemini] GEMINI_API_KEY is not set. Add it to .env or .env.local and restart the dev server."
+      "[Gemini] VITE_GEMINI_API_KEY is not set. Add it to .env (dev) or .env.production (desktop build)."
     );
     ai = null;
     return ai;
