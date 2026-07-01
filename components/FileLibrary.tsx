@@ -23,6 +23,8 @@ const FileLibrary: React.FC = () => {
   const [docTitle, setDocTitle] = useState('');
   const [docContent, setDocContent] = useState('');
   const [docCategory, setDocCategory] = useState<'Template' | 'Legal' | 'FAQ' | 'Guide'>('Template');
+  const [docSection, setDocSection] = useState('tenant-onboarding');
+  const [docCountry, setDocCountry] = useState<'ALL' | 'UK' | 'NG' | 'US' | 'IE'>('ALL');
   const [docSystemId, setDocSystemId] = useState('4'); // Rent Mgmt System
   const [previewMode, setPreviewMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -37,17 +39,20 @@ const FileLibrary: React.FC = () => {
     try {
       setLoading(true);
       const documents = await getDocuments();
-      const mappedFiles: FileAsset[] = documents.map((doc: Document) => ({
+      const mappedFiles: FileAsset[] = documents.map((doc: Document) => {
+        const categoryMatch = doc.documentName.match(/^\[(Template|Guide|Legal|FAQ)\]/i);
+        return {
         id: doc.id,
         name: doc.documentName,
         size: doc.size || '0 KB',
         type: doc.type?.split('/')[1]?.toUpperCase() || 'FILE',
         uploadedAt: new Date(doc.createdAt).toISOString().split('T')[0],
-        category: doc.docType || 'Template',
-        systemId: '4', // Rent Mgmt System
-        status: 'Published',
+        category: categoryMatch?.[1] || doc.docType || 'Template',
+        systemId: (doc as Document & { systemId?: string }).systemId || '4',
+        status: (doc as Document & { isPublished?: boolean }).isPublished === false ? 'Draft' : 'Published',
         url: doc.documentUrl?.[0] || '',
-      }));
+      };
+      });
       setFiles(mappedFiles);
     } catch (error) {
       console.error('Error loading files:', error);
@@ -89,7 +94,12 @@ const FileLibrary: React.FC = () => {
                             docCategory === 'Template' ? '[Template]' :
                             docCategory === 'Guide' ? '[Guide]' :
                             docCategory === 'Legal' ? '[Legal]' : '';
-      const documentName = categoryPrefix ? `${categoryPrefix} ${docTitle}` : docTitle;
+      const routingSuffix = docCountry === 'ALL'
+        ? `[templates:${docSection}]`
+        : `[templates:${docSection}:${docCountry}]`;
+      const documentName = categoryPrefix
+        ? `${categoryPrefix} ${docTitle} ${routingSuffix}`
+        : `${docTitle} ${routingSuffix}`;
       
       const blob = new Blob([docContent], { type: 'text/html' });
       const file = new File([blob], `${documentName}.html`, { type: 'text/html' });
@@ -103,6 +113,8 @@ const FileLibrary: React.FC = () => {
       setDocTitle('');
       setDocContent('');
       setDocCategory('Template');
+      setDocSection('tenant-onboarding');
+      setDocCountry('ALL');
       setPublishStatus('draft');
       alert('Document saved successfully!');
     } catch (error: any) {
@@ -184,6 +196,25 @@ const FileLibrary: React.FC = () => {
                        <option value="Guide">Guide</option>
                        <option value="FAQ">FAQ</option>
                        <option value="Legal">Legal Doc</option>
+                    </select>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Section</span>
+                    <select value={docSection} onChange={(e) => setDocSection(e.target.value)} className="glass-input py-1.5 px-3 rounded-lg text-sm font-bold cursor-pointer bg-white/40">
+                       <option value="tenant-onboarding">Tenant onboarding</option>
+                       <option value="property-operations">Property operations</option>
+                       <option value="legal-compliance">Legal &amp; compliance</option>
+                       <option value="financial-reporting">Financial reporting</option>
+                    </select>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Market</span>
+                    <select value={docCountry} onChange={(e) => setDocCountry(e.target.value as typeof docCountry)} className="glass-input py-1.5 px-3 rounded-lg text-sm font-bold cursor-pointer bg-white/40">
+                       <option value="ALL">All markets</option>
+                       <option value="UK">United Kingdom</option>
+                       <option value="NG">Nigeria</option>
+                       <option value="US">United States</option>
+                       <option value="IE">Ireland</option>
                     </select>
                  </div>
                  <div className="flex items-center gap-2">

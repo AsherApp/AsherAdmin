@@ -1,14 +1,16 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Email, UserProfile } from '../types';
+import { Email } from '../types';
 import { Inbox, Send, File, Trash2, Search, Star, Paperclip, MoreVertical, Reply, Forward, X, Pencil, Archive, Clock, AlertCircle, ArrowLeft, Maximize2, Minimize2, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Wand2, RotateCcw, Loader } from 'lucide-react';
 import { generateEmailDraft } from '../services/geminiService';
 import { getInbox, getUnreadEmails, Email as ApiEmail, createEmail } from '../services/emailService';
-import { getAllLandlords } from '../services/userService';
+import { getMessagingContacts, MessagingContact } from '../services/contactsService';
 
 const EmailSystem: React.FC = () => {
   const [emails, setEmails] = useState<Email[]>([]);
-  const [systemUsers, setSystemUsers] = useState<UserProfile[]>([]);
+  const [systemUsers, setSystemUsers] = useState<MessagingContact[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'sent' | 'drafts' | 'trash'>('inbox');
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
@@ -17,7 +19,7 @@ const EmailSystem: React.FC = () => {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeMinimized, setComposeMinimized] = useState(false);
   const [recipientSearch, setRecipientSearch] = useState('');
-  const [selectedRecipient, setSelectedRecipient] = useState<UserProfile | null>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<MessagingContact | null>(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -27,11 +29,32 @@ const EmailSystem: React.FC = () => {
 
   useEffect(() => {
     loadEmails();
-    loadUsers();
     // Refresh every 30 seconds
     const interval = setInterval(loadEmails, 30000);
     return () => clearInterval(interval);
   }, [activeFolder]);
+
+  useEffect(() => {
+    if (!isComposeOpen) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoadingContacts(true);
+      try {
+        const contacts = await getMessagingContacts(recipientSearch);
+        if (!cancelled) setSystemUsers(contacts);
+      } catch {
+        if (!cancelled) setSystemUsers([]);
+      } finally {
+        if (!cancelled) setLoadingContacts(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [recipientSearch, isComposeOpen]);
 
   const loadEmails = async () => {
     try {
@@ -74,46 +97,41 @@ const EmailSystem: React.FC = () => {
     }
   };
 
-  const loadUsers = async () => {
-    try {
-      const response = await getAllLandlords(1, 1000); // Get all landlords for recipient selection
-      setSystemUsers(response.data || []);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      setSystemUsers([]);
-    }
-  };
-
-  // Enhanced filtering logic
   const filteredEmails = emails.filter(e => {
     const matchesSearch = e.subject.toLowerCase().includes(searchQuery.toLowerCase()) || e.from.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     if (activeFolder === 'starred') {
       return e.isStarred && matchesSearch;
     }
     return e.folder === activeFolder && matchesSearch;
   });
 
-  const filteredUsers = systemUsers.filter(u => u.name.toLowerCase().includes(recipientSearch.toLowerCase()) || u.email.toLowerCase().includes(recipientSearch.toLowerCase()));
+  const filteredUsers = systemUsers.filter(u =>
+    u.name.toLowerCase().includes(recipientSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(recipientSearch.toLowerCase()) ||
+    u.mailboxEmail.toLowerCase().includes(recipientSearch.toLowerCase())
+  );
 
   const handleSend = async () => {
-    if (!selectedRecipient || !subject) return;
+    if (!selectedRecipient || !subject || !body) return;
     setIsSending(true);
+    setSendError(null);
     try {
       await createEmail({
         subject,
         body,
-        receiverEmail: selectedRecipient.email,
+        receiverId: selectedRecipient.userId,
       });
-      await loadEmails(); // Refresh emails
+      await loadEmails();
       setIsComposeOpen(false);
       setRecipientSearch('');
       setSelectedRecipient(null);
       setSubject('');
       setBody('');
       if (editorRef.current) editorRef.current.innerHTML = '';
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending email:', error);
+      setSendError(error?.message || 'Failed to send email');
     } finally {
       setIsSending(false);
     }
@@ -132,7 +150,7 @@ const EmailSystem: React.FC = () => {
   const handleAiDraft = async () => {
     if (!subject || !selectedRecipient) return;
     setIsDrafting(true);
-    const draft = await generateEmailDraft(subject, selectedRecipient.role);
+    const draft = await generateEmailDraft(subject, selectedRecipient.relationship);
     setBody(draft);
     if (editorRef.current) editorRef.current.innerHTML = draft;
     setIsDrafting(false);
@@ -191,7 +209,7 @@ const EmailSystem: React.FC = () => {
     <div className="flex h-[calc(100vh-100px)] gap-6 relative">
       {/* Sidebar */}
       <div className="w-64 flex flex-col py-2">
-        <button onClick={() => { setIsComposeOpen(true); setComposeMinimized(false); }} className="w-40 bg-white hover:bg-gray-50 text-gray-700 rounded-2xl py-4 px-6 font-medium shadow-lg flex items-center gap-3 mb-6 border border-gray-100 group transition-all hover:scale-105"><Pencil className="text-red-600 group-hover:rotate-12 transition-transform" size={20} /><span className="text-sm font-bold tracking-wide">Compose</span></button>
+        <button onClick={() => { setIsComposeOpen(true); setComposeMinimized(false); setSendError(null); }} className="w-40 bg-white hover:bg-gray-50 text-gray-700 rounded-2xl py-4 px-6 font-medium shadow-lg flex items-center gap-3 mb-6 border border-gray-100 group transition-all hover:scale-105"><Pencil className="text-red-600 group-hover:rotate-12 transition-transform" size={20} /><span className="text-sm font-bold tracking-wide">Compose</span></button>
         
         <div className="space-y-1 pr-4">
           <SidebarItem id="inbox" label="Inbox" icon={Inbox} />
@@ -318,8 +336,27 @@ const EmailSystem: React.FC = () => {
                         <span className="bg-red-50/80 border border-red-100 px-3 py-1 rounded-lg text-sm font-bold text-red-800 flex items-center gap-2">{selectedRecipient.name} <button onClick={() => setSelectedRecipient(null)}><X size={12}/></button></span>
                      ) : (
                         <div className="relative flex-1">
-                           <input type="text" placeholder="Recipients" value={recipientSearch} onChange={(e) => setRecipientSearch(e.target.value)} className="w-full bg-transparent outline-none text-sm font-medium" />
-                           {recipientSearch && <div className="absolute top-full left-0 w-72 bg-white/90 backdrop-blur-xl border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 mt-2 p-1">{filteredUsers.map(u => <div key={u.id} onClick={() => { setSelectedRecipient(u); setRecipientSearch(''); }} className="p-2 hover:bg-red-50 rounded-lg cursor-pointer text-sm font-bold">{u.name}</div>)}</div>}
+                           <input type="text" placeholder="Search users by name or email" value={recipientSearch} onChange={(e) => setRecipientSearch(e.target.value)} className="w-full bg-transparent outline-none text-sm font-medium" />
+                           {(recipientSearch || loadingContacts || filteredUsers.length > 0) && (
+                             <div className="absolute top-full left-0 w-96 bg-white/90 backdrop-blur-xl border rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 mt-2 p-1">
+                               {loadingContacts ? (
+                                 <div className="p-3 text-sm text-gray-500">Searching users...</div>
+                               ) : filteredUsers.length > 0 ? (
+                                 filteredUsers.map(u => (
+                                   <div
+                                     key={u.userId}
+                                     onClick={() => { setSelectedRecipient(u); setRecipientSearch(''); }}
+                                     className="p-2 hover:bg-red-50 rounded-lg cursor-pointer text-sm"
+                                   >
+                                     <div className="font-bold">{u.name}</div>
+                                     <div className="text-xs text-gray-500">{u.email} · {u.relationship}</div>
+                                   </div>
+                                 ))
+                               ) : (
+                                 <div className="p-3 text-sm text-gray-500">No users found</div>
+                               )}
+                             </div>
+                           )}
                         </div>
                      )}
                   </div>
@@ -348,9 +385,12 @@ const EmailSystem: React.FC = () => {
                   </div>
 
                   <div className="p-6 border-t border-white/20 flex justify-between items-center bg-white/10 backdrop-blur-md">
-                     <div className="flex gap-2">
-                       <button onClick={handleSend} disabled={!selectedRecipient || !subject || isSending} className="bg-red-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50">{isSending ? 'Sending...' : 'Send Message'} <Send size={18} /></button>
+                     <div className="flex flex-col gap-2">
+                       <div className="flex gap-2">
+                       <button onClick={handleSend} disabled={!selectedRecipient || !subject || !body || isSending} className="bg-red-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50">{isSending ? 'Sending...' : 'Send Message'} <Send size={18} /></button>
                        <button onClick={handleSaveDraft} className="bg-white/50 text-gray-700 px-4 py-3 rounded-xl text-sm font-bold hover:bg-white/80">Save Draft</button>
+                       </div>
+                       {sendError && <p className="text-sm font-medium text-red-600">{sendError}</p>}
                      </div>
                      <button onClick={() => setIsComposeOpen(false)} className="p-3 text-gray-400 hover:text-red-600 transition"><Trash2 size={20}/></button>
                   </div>

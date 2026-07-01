@@ -13,7 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
-  HelpCircle
+  HelpCircle,
+  ShieldCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 import { logout } from '../services/authService';
 
@@ -36,6 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'systems', label: 'System Monitor', icon: Activity },
     { id: 'users', label: 'User Directory', icon: Users },
+    { id: 'identity-review', label: 'Identity Review', icon: ShieldCheck },
+    { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
     { id: 'tickets', label: 'Support Tickets', icon: Ticket },
     { id: 'email', label: 'Internal Mail', icon: Mail },
     { id: 'inbox', label: 'Live Chat', icon: MessageSquare },

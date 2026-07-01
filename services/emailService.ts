@@ -35,7 +35,8 @@ export interface Email {
 export interface CreateEmailData {
   subject: string;
   body: string;
-  receiverEmail: string;
+  receiverEmail?: string;
+  receiverId?: string;
   attachment?: string[];
   isDraft?: boolean;
 }
@@ -101,7 +102,11 @@ export const createEmail = async (emailData: CreateEmailData, files?: File[]): P
     const formData = new FormData();
     formData.append('subject', emailData.subject);
     formData.append('body', emailData.body);
-    formData.append('receiverEmail', emailData.receiverEmail);
+    if (emailData.receiverId) {
+      formData.append('receiverId', emailData.receiverId);
+    } else if (emailData.receiverEmail) {
+      formData.append('receiverEmail', emailData.receiverEmail);
+    }
     if (emailData.isDraft !== undefined) {
       formData.append('isDraft', String(emailData.isDraft));
     }
@@ -111,10 +116,10 @@ export const createEmail = async (emailData: CreateEmailData, files?: File[]): P
     });
 
     const response = await api.postFormData('/emails', formData);
-    return response.data || response;
+    return response.data?.email || response.email || response.data || response;
   } else {
     const response = await api.post('/emails', emailData);
-    return response.data || response;
+    return response.data?.email || response.email || response.data || response;
   }
 };
 

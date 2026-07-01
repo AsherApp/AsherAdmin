@@ -7,3 +7,4 @@ export * from './analyticsService';
 export * from './chatService';
 export * from './notificationService';
 export * from './supportContentService';
+export * from './contactsService';

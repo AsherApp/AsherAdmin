@@ -15,6 +15,8 @@ export interface Document {
   type: string;
   size: string;
   docType?: string;
+  systemId?: string;
+  isPublished?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -122,7 +124,9 @@ export const uploadDocuments = async (
  */
 export const getDocuments = async (): Promise<Document[]> => {
   const response = await api.get('/admin/documents');
-  return response.data || response.documents || [];
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response)) return response;
+  return [];
 };
 
 /**
