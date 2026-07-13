@@ -19,8 +19,13 @@ import Login from './pages/Login';
 import SetPassword from './pages/SetPassword';
 import { Menu, Bell, CheckCircle, AlertTriangle, Info, MessageCircle } from 'lucide-react';
 import { AppNotification } from './types';
-import { isAuthenticated } from './services/authService';
+import { getCurrentUser, isAuthenticated } from './services/authService';
 import { getAllNotifications, markAllAsRead, clearAllNotifications, markAsRead, Notification } from './services/notificationService';
+import {
+  connectAdminNotifications,
+  disconnectAdminNotifications,
+  subscribeAdminLiveNotifications,
+} from './services/notificationSocket';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -62,6 +67,7 @@ const convertNotification = (notif: Notification): AppNotification => {
     message: notif.message,
     timestamp: formatTimestamp(notif.createdAt),
     isRead: notif.isRead,
+    actionLink: notif.route,
   };
 };
 
@@ -78,26 +84,63 @@ const DashboardLayout: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  // Load notifications on mount and set up polling
-  useEffect(() => {
-    loadNotifications();
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadNotifications = async () => {
+  const loadNotifications = async (opts?: { silent?: boolean }) => {
     try {
-      setLoadingNotifications(true);
+      if (!opts?.silent) {
+        setLoadingNotifications(true);
+      }
       const response = await getAllNotifications();
       const converted = response.notifications.map(convertNotification);
       setNotifications(converted);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
-      setLoadingNotifications(false);
+      if (!opts?.silent) {
+        setLoadingNotifications(false);
+      }
     }
   };
+
+  // Load notifications on mount, poll as fallback, and live socket updates
+  useEffect(() => {
+    void loadNotifications();
+    const interval = setInterval(() => {
+      void loadNotifications({ silent: true });
+    }, 30000);
+
+    const user = getCurrentUser();
+    const token = localStorage.getItem('admin_token');
+    if (user?.id && token) {
+      connectAdminNotifications(user.id, token);
+    }
+
+    const unsubscribe = subscribeAdminLiveNotifications((payload) => {
+      const live: AppNotification = {
+        id: String(payload.id ?? Date.now()),
+        type: mapCategoryToType(payload.category as string | undefined),
+        title: String(payload.title ?? 'Notification'),
+        message: String(payload.message ?? ''),
+        timestamp: formatTimestamp(
+          String(payload.timestamp ?? payload.createdAt ?? new Date().toISOString())
+        ),
+        isRead: false,
+        actionLink:
+          (payload.actionUrl as string | undefined) ??
+          (payload.route as string | undefined),
+      };
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === live.id)) return prev;
+        return [live, ...prev];
+      });
+      void loadNotifications({ silent: true });
+    });
+
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+      disconnectAdminNotifications();
+    };
+  }, []);
 
   const handleMarkAllRead = async () => {
     try {
@@ -117,12 +160,20 @@ const DashboardLayout: React.FC = () => {
     }
   };
 
-  const handleNotificationClick = async (notificationId: string) => {
+  const handleNotificationClick = async (notification: AppNotification) => {
     try {
-      await markAsRead(notificationId);
-      setNotifications(notifications.map(n => 
-        n.id === notificationId ? {...n, isRead: true} : n
-      ));
+      if (!notification.isRead) {
+        await markAsRead(notification.id);
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notification.id ? { ...n, isRead: true } : n
+          )
+        );
+      }
+      if (notification.actionLink) {
+        window.location.href = notification.actionLink;
+      }
+      setShowNotifications(false);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -228,7 +279,7 @@ const DashboardLayout: React.FC = () => {
                      notifications.map(notif => (
                         <div 
                            key={notif.id} 
-                           onClick={() => !notif.isRead && handleNotificationClick(notif.id)}
+                           onClick={() => handleNotificationClick(notif)}
                            className={`p-3 mb-2 rounded-xl flex gap-3 items-start transition-colors cursor-pointer ${notif.isRead ? 'bg-white/20 hover:bg-white/40 opacity-80' : 'bg-white/60 hover:bg-white/80 border-l-4 border-l-red-500 shadow-sm'}`}
                         >
                            <div className={`mt-0.5 p-1.5 rounded-full bg-white/50 shadow-sm`}>

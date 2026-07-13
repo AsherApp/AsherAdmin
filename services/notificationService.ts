@@ -7,6 +7,8 @@ export interface Notification {
   title: string;
   message: string;
   category?: string;
+  notificationType?: string;
+  route?: string;
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
