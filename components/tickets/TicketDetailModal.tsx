@@ -198,6 +198,41 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description</h4>
                   <p className="text-gray-800 text-sm leading-relaxed font-medium">{currentTicket.description}</p>
                 </div>
+
+                {/* Disputed job evidence (VENDOR_APP_FLOW_SPEC.md Part 6):
+                    the tagged maintenance record's photos/status/payment,
+                    pulled directly - no re-uploads from the disputing party. */}
+                {(currentTicket as any).maintenance ? (
+                  <div className="glass-panel !bg-red-50/60 border border-red-100 p-5 rounded-2xl mb-6">
+                    <h4 className="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">Disputed job</h4>
+                    <p className="text-gray-800 text-sm font-medium">{(currentTicket as any).maintenance.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {(currentTicket as any).maintenance.property?.name}
+                      {(currentTicket as any).maintenance.property?.address ? ` · ${(currentTicket as any).maintenance.property.address}` : ''}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-2 text-xs font-bold">
+                      <span className="bg-white px-2 py-1 rounded-lg text-gray-700">Status: {(currentTicket as any).maintenance.status}</span>
+                      <span className="bg-white px-2 py-1 rounded-lg text-gray-700">Payment: {(currentTicket as any).maintenance.paymentStatus}</span>
+                      {(currentTicket as any).maintenance.amount ? (
+                        <span className="bg-white px-2 py-1 rounded-lg text-gray-700">Amount: {(currentTicket as any).maintenance.amount}</span>
+                      ) : null}
+                      <span className="bg-white px-2 py-1 rounded-lg text-gray-700">
+                        Confirmed by requester: {(currentTicket as any).maintenance.tenantVerified ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    {[...((currentTicket as any).maintenance.startAttachments ?? []), ...((currentTicket as any).maintenance.endAttachments ?? [])].length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {[...((currentTicket as any).maintenance.startAttachments ?? []), ...((currentTicket as any).maintenance.endAttachments ?? [])].map((url: string, i: number) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                            <img src={url} alt={`Job evidence ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-red-100" />
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 mt-2">No before/after photos on this job.</p>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               {/* AI Section */}
