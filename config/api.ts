@@ -106,6 +106,29 @@ const getErrorMessage = (error: {
   return error.message || 'Request failed';
 };
 
+const clearAuthAndRedirect = (reason: string) => {
+  console.error(`❌ ${reason}; clearing auth data`);
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_refresh_token');
+  localStorage.removeItem('admin_user');
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    window.location.assign('/login');
+  }
+};
+
+const isSessionExpiredError = (status: number, message?: string): boolean => {
+  if (status !== 401 && status !== 403) return false;
+  const msg = (message || '').toLowerCase();
+  return (
+    msg.includes('invalid refresh token') ||
+    msg.includes('refresh token required') ||
+    msg.includes('invalid or expired refresh token') ||
+    msg.includes('invalid or expired token') ||
+    msg.includes('not authorized, token missing') ||
+    msg.includes('session expired')
+  );
+};
+
 // API Request wrapper with automatic token refresh
 const apiRequest = async (
   endpoint: string,
@@ -154,23 +177,26 @@ const apiRequest = async (
 
         if (!retryResponse.ok) {
           const error = await retryResponse.json().catch(() => ({ message: 'Request failed' }));
+          if (isSessionExpiredError(retryResponse.status, error.message)) {
+            clearAuthAndRedirect('Session expired after token refresh');
+          }
           throw new Error(getErrorMessage(error) || `HTTP error! status: ${retryResponse.status}`);
         }
 
         return retryResponse.json();
       } else {
-        // Refresh failed - clear tokens and redirect to login
-        console.error('❌ Token refresh failed, clearing auth data');
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('admin_refresh_token');
-        localStorage.removeItem('admin_user');
-        // Redirect to login will be handled by ProtectedRoute
+        clearAuthAndRedirect('Token refresh failed');
         throw new Error('Session expired. Please login again.');
       }
     }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      // Backend returns 403 "Invalid refresh token" when access token is expired
+      // and refresh fails — clear the stuck session so ProtectedRoute can send user to login.
+      if (isSessionExpiredError(response.status, error.message)) {
+        clearAuthAndRedirect(error.message || 'Session expired');
+      }
       throw new Error(getErrorMessage(error) || `HTTP error! status: ${response.status}`);
     }
 

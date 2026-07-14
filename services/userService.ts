@@ -5,6 +5,7 @@ import {
   cancelLandlordInvite,
   deleteLandlordAccount,
   setLandlordTempPassword,
+  setLandlordSuspension,
 } from './adminService';
 import { CreateUserData } from './authService';
 import { UserProfile } from '../types';
@@ -42,7 +43,7 @@ export const mapLandlordToUserProfile = (user: User): UserProfile => ({
   email: user.email,
   role: typeof user.role === 'string' ? user.role : 'Landlord',
   systemId: user.systemId || '4',
-  status: user.status || (user.isVerified ? 'Active' : 'Pending Invite'),
+  status: user.status || ((user as any).isSuspended ? 'Suspended' : user.isVerified ? 'Active' : 'Pending Invite'),
   lastActive: user.lastActive || 'Invitation sent',
   phone: user.phone || user.profile?.phoneNumber || '',
   ticketsRaised: user.ticketsRaised || 0,
@@ -136,5 +137,5 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword };
+export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension };
 

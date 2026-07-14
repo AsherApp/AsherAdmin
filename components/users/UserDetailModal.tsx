@@ -13,6 +13,7 @@ import {
   cancelLandlordInvite,
   deleteLandlordAccount,
   setLandlordTempPassword,
+  setLandlordSuspension,
 } from '../../services/userService';
 import {
   getTicketsByUserId,
@@ -190,7 +191,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const handleDeleteAccount = async () => {
     if (
       !window.confirm(
-        `Permanently delete ${user.name}'s account (${user.email})?\n\nThis removes the user from the directory and cannot be undone.`
+        `Permanently remove ${user.name}'s account (${user.email}) from the system?\n\nThis will:\n• Remove them from the admin directory\n• Deactivate their properties and tenants\n• Block all future sign-in\n\nThis cannot be undone.`
       )
     ) {
       return;
@@ -205,6 +206,35 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
       onClose();
     } catch (err: any) {
       setInviteError(err.message || 'Failed to delete account');
+      setInviteLoading(null);
+    }
+  };
+
+  const handleToggleSuspension = async () => {
+    const shouldSuspend = user.status !== 'Suspended';
+    const actionLabel = shouldSuspend ? 'suspend' : 'reinstate';
+    if (
+      !window.confirm(
+        shouldSuspend
+          ? `Suspend ${user.name}'s account? They will be signed out and unable to log in until reinstated.`
+          : `Reinstate ${user.name}'s account? They will be able to sign in again.`
+      )
+    ) {
+      return;
+    }
+
+    setInviteLoading('suspend');
+    setInviteError('');
+    try {
+      const response = await setLandlordSuspension(user.id, shouldSuspend);
+      onUpdate({
+        status: shouldSuspend ? 'Suspended' : 'Active',
+        lastActive: shouldSuspend ? 'Suspended' : 'Offline',
+      });
+      setInviteMessage(response.message || `Account ${actionLabel}d successfully.`);
+    } catch (err: any) {
+      setInviteError(err.message || `Failed to ${actionLabel} account`);
+    } finally {
       setInviteLoading(null);
     }
   };
@@ -519,17 +549,35 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                     <div className="p-6 rounded-2xl border border-red-200/40 shadow-lg backdrop-blur-md bg-red-50/20">
                        <h3 className="font-bold text-red-900 mb-6 flex items-center gap-2 text-lg"><Shield size={20} className="text-red-600" /> Administrative Actions</h3>
                        <div className="space-y-4">
-                         <div className="flex items-center justify-between p-4 border border-red-100/40 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
-                            <div><p className="text-sm font-bold text-gray-800">Suspend Account</p><p className="text-xs text-gray-500 mt-1">Temporarily disable access.</p></div>
-                            <button onClick={() => onUpdate({status: user.status === 'Active' ? 'Suspended' : 'Active'})} className="px-4 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 bg-white/50">{user.status === 'Active' ? 'Suspend' : 'Activate'}</button>
+                         {!isPendingInvite && (
+                           <div className="flex items-center justify-between p-4 border border-red-100/40 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
+                            <div>
+                              <p className="text-sm font-bold text-gray-800">
+                                {user.status === 'Suspended' ? 'Reinstate Account' : 'Suspend Account'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {user.status === 'Suspended'
+                                  ? 'Restore login access for this landlord.'
+                                  : 'Temporarily disable login and API access.'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={handleToggleSuspension}
+                              disabled={inviteLoading !== null}
+                              className="px-4 py-2 rounded-lg text-xs font-bold border border-red-200 text-red-700 hover:bg-red-50 bg-white/50 flex items-center gap-2 disabled:opacity-50"
+                            >
+                              {inviteLoading === 'suspend' ? <Loader className="animate-spin" size={14} /> : null}
+                              {user.status === 'Suspended' ? 'Activate' : 'Suspend'}
+                            </button>
                          </div>
+                         )}
 
                          {!isPendingInvite && (
                            <div className="flex items-center justify-between p-4 border border-red-200/50 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
                              <div>
                                <p className="text-sm font-bold text-red-800">Delete Account</p>
                                <p className="text-xs text-gray-500 mt-1">
-                                 Permanently remove this landlord from the directory. Only available when they have no properties or tenants.
+                                 Permanently remove this landlord from the system, including deactivating their properties and tenants.
                                </p>
                              </div>
                              <button

@@ -65,3 +65,20 @@ export const setLandlordTempPassword = async (
   return api.post(`/admin/landlords/${userId}/temp-password`, { tempPassword });
 };
 
+export const setLandlordSuspension = async (
+  userId: string,
+  suspend: boolean
+): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    userId: string;
+    email: string;
+    status: string;
+    isSuspended?: boolean;
+    suspendedAt?: string | null;
+  };
+}> => {
+  return api.post(`/admin/landlords/${userId}/suspend`, { suspend });
+};
+
