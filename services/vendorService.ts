@@ -95,8 +95,11 @@ export const approveVendorVerification = async (vendorId: string): Promise<void>
   await api.post(`/admin/vendors/${vendorId}/verification/approve`);
 };
 
-export const rejectVendorVerification = async (vendorId: string): Promise<void> => {
-  await api.post(`/admin/vendors/${vendorId}/verification/reject`);
+export const rejectVendorVerification = async (
+  vendorId: string,
+  reason: string
+): Promise<void> => {
+  await api.post(`/admin/vendors/${vendorId}/verification/reject`, { reason });
 };
 
 // --- Document-requirements config ---
@@ -106,8 +109,20 @@ export interface VendorDocumentRequirement {
   type: string;
   label: string;
   active: boolean;
+  // Scoping: which market and which signup type this requirement targets.
+  country?: string | null; // null/empty = all countries
+  appliesTo?: 'ALL' | 'INDIVIDUAL' | 'BUSINESS';
+  description?: string | null;
+  sortOrder?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface VendorDocumentRequirementInput {
+  country?: string | null;
+  appliesTo?: 'ALL' | 'INDIVIDUAL' | 'BUSINESS';
+  description?: string | null;
+  sortOrder?: number;
 }
 
 export const getVendorDocumentRequirements = async (): Promise<
@@ -119,15 +134,20 @@ export const getVendorDocumentRequirements = async (): Promise<
 
 export const createVendorDocumentRequirement = async (
   type: string,
-  label: string
+  label: string,
+  extras?: VendorDocumentRequirementInput
 ): Promise<VendorDocumentRequirement> => {
-  const response = await api.post('/admin/vendors/document-requirements', { type, label });
+  const response = await api.post('/admin/vendors/document-requirements', {
+    type,
+    label,
+    ...(extras ?? {}),
+  });
   return response.data;
 };
 
 export const updateVendorDocumentRequirement = async (
   requirementId: string,
-  data: { label?: string; active?: boolean }
+  data: { label?: string; active?: boolean } & VendorDocumentRequirementInput
 ): Promise<VendorDocumentRequirement> => {
   const response = await api.patch(`/admin/vendors/document-requirements/${requirementId}`, data);
   return response.data;

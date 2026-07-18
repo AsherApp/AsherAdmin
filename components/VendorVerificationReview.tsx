@@ -15,6 +15,8 @@ const VendorVerificationReview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [rejectingVendorId, setRejectingVendorId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const loadPending = useCallback(async () => {
     setLoading(true);
@@ -50,14 +52,19 @@ const VendorVerificationReview: React.FC = () => {
     }
   };
 
-  const handleReject = async (vendorId: string) => {
-    if (!window.confirm('Reject this vendor submission? They will need to restart onboarding.')) {
+  const handleReject = async () => {
+    const vendorId = rejectingVendorId;
+    const reason = rejectionReason.trim();
+    if (!vendorId || reason.length < 10) {
+      setError('Enter a clear rejection reason of at least 10 characters.');
       return;
     }
     setActionId(vendorId);
     try {
-      await rejectVendorVerification(vendorId);
+      await rejectVendorVerification(vendorId, reason);
       setItems((prev) => prev.filter((item) => item.vendorId !== vendorId));
+      setRejectingVendorId(null);
+      setRejectionReason('');
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to reject verification';
@@ -157,7 +164,11 @@ const VendorVerificationReview: React.FC = () => {
                   Approve
                 </button>
                 <button
-                  onClick={() => void handleReject(item.vendorId)}
+                  onClick={() => {
+                    setError('');
+                    setRejectingVendorId(item.vendorId);
+                    setRejectionReason('');
+                  }}
                   disabled={actionId === item.vendorId}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold disabled:opacity-50"
                 >
@@ -167,6 +178,58 @@ const VendorVerificationReview: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {rejectingVendorId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="vendor-rejection-title"
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6">
+            <h3 id="vendor-rejection-title" className="text-xl font-bold text-gray-900">
+              Reject vendor verification
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Explain exactly what must be corrected. The vendor will see this reason before
+              using one of their resubmission attempts.
+            </p>
+            <label htmlFor="vendor-rejection-reason" className="mt-5 block text-sm font-bold text-gray-800">
+              Rejection reason
+            </label>
+            <textarea
+              id="vendor-rejection-reason"
+              autoFocus
+              rows={5}
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              placeholder="For example: the proof of address is older than three months."
+              className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-100"
+            />
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingVendorId(null);
+                  setRejectionReason('');
+                }}
+                disabled={actionId === rejectingVendorId}
+                className="min-h-11 rounded-xl border border-gray-200 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleReject()}
+                disabled={actionId === rejectingVendorId || rejectionReason.trim().length < 10}
+                className="min-h-11 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {actionId === rejectingVendorId ? 'Rejecting...' : 'Reject submission'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
