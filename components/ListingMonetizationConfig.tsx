@@ -1,0 +1,242 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { Loader, Save, Settings2 } from 'lucide-react';
+import {
+  getListingMonetizationConfig,
+  ListingMonetizationConfig,
+  updateListingMonetizationConfig,
+} from '../services/systemConfigService';
+
+type FormState = {
+  freePerMonth: string;
+  premiumDays: string;
+  listFeeGbp: string;
+  premiumFeeGbp: string;
+  listFeeNgn: string;
+  premiumFeeNgn: string;
+  listFeeUsd: string;
+  premiumFeeUsd: string;
+  listFeeEur: string;
+  premiumFeeEur: string;
+};
+
+const toForm = (config: ListingMonetizationConfig): FormState => ({
+  freePerMonth: String(config.freePerMonth),
+  premiumDays: String(config.premiumDays),
+  listFeeGbp: String(config.fees.GBP.listFee),
+  premiumFeeGbp: String(config.fees.GBP.premiumFee),
+  listFeeNgn: String(config.fees.NGN.listFee),
+  premiumFeeNgn: String(config.fees.NGN.premiumFee),
+  listFeeUsd: String(config.fees.USD.listFee),
+  premiumFeeUsd: String(config.fees.USD.premiumFee),
+  listFeeEur: String(config.fees.EUR.listFee),
+  premiumFeeEur: String(config.fees.EUR.premiumFee),
+});
+
+const Field = ({
+  label,
+  value,
+  onChange,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  hint?: string;
+}) => (
+  <label className="block space-y-1.5">
+    <span className="text-sm font-semibold text-gray-700">{label}</span>
+    <input
+      type="number"
+      min={0}
+      step="any"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+    />
+    {hint ? <span className="text-xs text-gray-500">{hint}</span> : null}
+  </label>
+);
+
+const ListingMonetizationConfigPage: React.FC = () => {
+  const [form, setForm] = useState<FormState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [updatedAt, setUpdatedAt] = useState<string | undefined>();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const config = await getListingMonetizationConfig();
+      setForm(toForm(config));
+      setUpdatedAt(config.updatedAt);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load listing monetization config'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const setField = (key: keyof FormState, value: string) => {
+    setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+    setSuccess('');
+  };
+
+  const handleSave = async () => {
+    if (!form) return;
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const updated = await updateListingMonetizationConfig({
+        freePerMonth: Number(form.freePerMonth),
+        premiumDays: Number(form.premiumDays),
+        listFeeGbp: Number(form.listFeeGbp),
+        premiumFeeGbp: Number(form.premiumFeeGbp),
+        listFeeNgn: Number(form.listFeeNgn),
+        premiumFeeNgn: Number(form.premiumFeeNgn),
+        listFeeUsd: Number(form.listFeeUsd),
+        premiumFeeUsd: Number(form.premiumFeeUsd),
+        listFeeEur: Number(form.listFeeEur),
+        premiumFeeEur: Number(form.premiumFeeEur),
+      });
+      setForm(toForm(updated));
+      setUpdatedAt(updated.updatedAt);
+      setSuccess('System listing fees saved. Landlord publish flow will use these values.');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to save listing monetization config'
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-gray-800">
+          <Settings2 className="text-red-600" />
+          Listing monetization
+        </h2>
+        <p className="mt-1 text-sm font-medium text-gray-600">
+          Platform system config for free monthly listings, paid publish fees, and
+          premium pins. Charged from landlord wallets by property currency.
+        </p>
+        {updatedAt ? (
+          <p className="mt-1 text-xs text-gray-400">
+            Last updated {new Date(updatedAt).toLocaleString()}
+          </p>
+        ) : null}
+      </div>
+
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {success}
+        </div>
+      ) : null}
+
+      {loading || !form ? (
+        <div className="flex items-center gap-2 text-gray-500">
+          <Loader className="animate-spin" size={18} />
+          Loading system config…
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-800">Quota & duration</h3>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <Field
+                label="Free listings per month"
+                value={form.freePerMonth}
+                onChange={(v) => setField('freePerMonth', v)}
+                hint="Each landlord gets this many free publishes each calendar month."
+              />
+              <Field
+                label="Premium pin duration (days)"
+                value={form.premiumDays}
+                onChange={(v) => setField('premiumDays', v)}
+                hint="How long a promoted listing stays pinned on tenant search/landing."
+              />
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-800">Fees by currency</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              List fee applies after free quota. Premium fee is optional on top
+              (free+premium or paid+premium).
+            </p>
+            <div className="mt-5 grid gap-6 lg:grid-cols-2">
+              {(
+                [
+                  ['GBP', 'listFeeGbp', 'premiumFeeGbp', 'United Kingdom'],
+                  ['NGN', 'listFeeNgn', 'premiumFeeNgn', 'Nigeria'],
+                  ['USD', 'listFeeUsd', 'premiumFeeUsd', 'US dollar markets'],
+                  ['EUR', 'listFeeEur', 'premiumFeeEur', 'Euro markets'],
+                ] as const
+              ).map(([code, listKey, premiumKey, market]) => (
+                <div
+                  key={code}
+                  className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4"
+                >
+                  <p className="text-sm font-bold text-gray-800">
+                    {code}{' '}
+                    <span className="font-medium text-gray-500">· {market}</span>
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <Field
+                      label={`List fee (${code})`}
+                      value={form[listKey]}
+                      onChange={(v) => setField(listKey, v)}
+                    />
+                    <Field
+                      label={`Premium fee (${code})`}
+                      value={form[premiumKey]}
+                      onChange={(v) => setField(premiumKey, v)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-red-500/20 transition hover:bg-red-700 disabled:opacity-60"
+            >
+              {saving ? (
+                <Loader className="animate-spin" size={16} />
+              ) : (
+                <Save size={16} />
+              )}
+              Save system config
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ListingMonetizationConfigPage;

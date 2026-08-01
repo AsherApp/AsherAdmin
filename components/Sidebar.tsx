@@ -18,6 +18,7 @@ import {
   ClipboardCheck,
   Wrench,
   FileCheck,
+  Coins,
 } from 'lucide-react';
 import { logout } from '../services/authService';
 
@@ -44,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
     { id: 'vendors', label: 'Vendors', icon: Wrench },
     { id: 'vendor-verification', label: 'Vendor Verification', icon: ShieldCheck },
     { id: 'vendor-document-requirements', label: 'Vendor Documents', icon: FileCheck },
+    { id: 'listing-monetization', label: 'Listing Fees', icon: Coins },
     { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
     { id: 'tickets', label: 'Support Tickets', icon: Ticket },
     { id: 'email', label: 'Internal Mail', icon: Mail },
