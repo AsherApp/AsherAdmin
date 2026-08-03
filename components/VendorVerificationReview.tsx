@@ -83,7 +83,8 @@ const VendorVerificationReview: React.FC = () => {
             Vendor Verification
           </h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Review vendor ID, certification, and selfie uploads before the Vendor app unlocks.
+            Review Asher documents and payout readiness (Stripe / Paystack) before unlocking the
+            Vendor app.
           </p>
         </div>
         <button
@@ -149,20 +150,69 @@ const VendorVerificationReview: React.FC = () => {
                     <span className="text-xs text-gray-400">No documents submitted</span>
                   )}
                 </div>
+                {item.payout && item.payout.status !== 'N/A' ? (
+                  <div className="mt-3 rounded-xl border border-gray-100 bg-white/60 px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+                        {item.payout.provider} payouts
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          item.payout.status === 'READY'
+                            ? 'bg-green-50 text-green-700'
+                            : item.payout.status === 'PENDING'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {item.payout.status === 'READY'
+                          ? 'Ready'
+                          : item.payout.status === 'PENDING'
+                            ? 'Needs more'
+                            : 'Not started'}
+                      </span>
+                    </div>
+                    {item.payout.requirements?.length ? (
+                      <p className="text-xs text-amber-700 mt-1">
+                        Still needed: {item.payout.requirements.join(' · ')}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => void handleApprove(item.vendorId)}
-                  disabled={actionId === item.vendorId}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
-                >
-                  {actionId === item.vendorId ? (
-                    <Loader size={16} className="animate-spin" />
-                  ) : (
-                    <Check size={16} />
-                  )}
-                  Approve
-                </button>
+              <div className="flex flex-col gap-2 shrink-0 items-stretch lg:items-end">
+                {(() => {
+                  const needsPayout =
+                    item.payout?.provider === 'STRIPE' || item.payout?.provider === 'PAYSTACK';
+                  const payoutReady = !needsPayout || item.payout?.status === 'READY';
+                  return (
+                    <>
+                      {!payoutReady ? (
+                        <p className="text-[11px] font-medium text-amber-700 text-right max-w-[220px]">
+                          Approve unlocks when{' '}
+                          {item.payout?.provider === 'PAYSTACK' ? 'Paystack' : 'Stripe'} is Ready.
+                        </p>
+                      ) : null}
+                      <button
+                        onClick={() => void handleApprove(item.vendorId)}
+                        disabled={actionId === item.vendorId || !payoutReady}
+                        title={
+                          payoutReady
+                            ? 'Approve vendor'
+                            : 'Payout setup must be Ready before you can approve'
+                        }
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {actionId === item.vendorId ? (
+                          <Loader size={16} className="animate-spin" />
+                        ) : (
+                          <Check size={16} />
+                        )}
+                        Approve
+                      </button>
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => {
                     setError('');

@@ -78,10 +78,18 @@ export interface PendingVendorVerification {
   userId: string;
   name: string;
   email: string;
+  country?: string | null;
   businessName: string | null;
   businessRegistrationNumber: string | null;
   documents: VendorDocument[];
   submittedAt: string | null;
+  payout?: {
+    provider: 'STRIPE' | 'PAYSTACK' | 'NONE';
+    status: 'READY' | 'PENDING' | 'NOT_STARTED' | 'N/A';
+    detailsSubmitted: boolean;
+    payoutsEnabled: boolean;
+    requirements: string[];
+  };
 }
 
 export const getPendingVendorVerifications = async (): Promise<
@@ -155,4 +163,56 @@ export const updateVendorDocumentRequirement = async (
 
 export const deleteVendorDocumentRequirement = async (requirementId: string): Promise<void> => {
   await api.delete(`/admin/vendors/document-requirements/${requirementId}`);
+};
+
+// --- Profile/business field requirements (Stripe-ready collection) ---
+
+export interface VendorFieldRequirement {
+  id: string;
+  key: string;
+  label: string;
+  description?: string | null;
+  active: boolean;
+  country?: string | null;
+  appliesTo?: 'ALL' | 'INDIVIDUAL' | 'BUSINESS';
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VendorFieldRequirementInput {
+  country?: string | null;
+  appliesTo?: 'ALL' | 'INDIVIDUAL' | 'BUSINESS';
+  description?: string | null;
+  sortOrder?: number;
+}
+
+export const getVendorFieldRequirements = async (): Promise<VendorFieldRequirement[]> => {
+  const response = await api.get('/admin/vendors/field-requirements');
+  return response.data ?? [];
+};
+
+export const createVendorFieldRequirement = async (
+  key: string,
+  label: string,
+  extras?: VendorFieldRequirementInput
+): Promise<VendorFieldRequirement> => {
+  const response = await api.post('/admin/vendors/field-requirements', {
+    key,
+    label,
+    ...(extras ?? {}),
+  });
+  return response.data;
+};
+
+export const updateVendorFieldRequirement = async (
+  requirementId: string,
+  data: { label?: string; active?: boolean } & VendorFieldRequirementInput
+): Promise<VendorFieldRequirement> => {
+  const response = await api.patch(`/admin/vendors/field-requirements/${requirementId}`, data);
+  return response.data;
+};
+
+export const deleteVendorFieldRequirement = async (requirementId: string): Promise<void> => {
+  await api.delete(`/admin/vendors/field-requirements/${requirementId}`);
 };

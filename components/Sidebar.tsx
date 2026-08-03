@@ -44,7 +44,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
     { id: 'identity-review', label: 'Identity Review', icon: ShieldCheck },
     { id: 'vendors', label: 'Vendors', icon: Wrench },
     { id: 'vendor-verification', label: 'Vendor Verification', icon: ShieldCheck },
-    { id: 'vendor-document-requirements', label: 'Vendor Documents', icon: FileCheck },
+    { id: 'vendor-document-requirements', label: 'Vendor Onboarding', icon: FileCheck },
     { id: 'listing-monetization', label: 'Listing Fees', icon: Coins },
     { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
     { id: 'tickets', label: 'Support Tickets', icon: Ticket },
