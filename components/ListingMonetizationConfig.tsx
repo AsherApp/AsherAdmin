@@ -17,6 +17,10 @@ type FormState = {
   premiumFeeUsd: string;
   listFeeEur: string;
   premiumFeeEur: string;
+  relocatePostFeeGbp: string;
+  relocatePostFeeNgn: string;
+  relocatePostFeeUsd: string;
+  relocatePostFeeEur: string;
 };
 
 const toForm = (config: ListingMonetizationConfig): FormState => ({
@@ -30,6 +34,10 @@ const toForm = (config: ListingMonetizationConfig): FormState => ({
   premiumFeeUsd: String(config.fees.USD.premiumFee),
   listFeeEur: String(config.fees.EUR.listFee),
   premiumFeeEur: String(config.fees.EUR.premiumFee),
+  relocatePostFeeGbp: String(config.fees.GBP.relocatePostFee ?? 25),
+  relocatePostFeeNgn: String(config.fees.NGN.relocatePostFee ?? 15000),
+  relocatePostFeeUsd: String(config.fees.USD.relocatePostFee ?? 30),
+  relocatePostFeeEur: String(config.fees.EUR.relocatePostFee ?? 28),
 });
 
 const Field = ({
@@ -109,10 +117,14 @@ const ListingMonetizationConfigPage: React.FC = () => {
         premiumFeeUsd: Number(form.premiumFeeUsd),
         listFeeEur: Number(form.listFeeEur),
         premiumFeeEur: Number(form.premiumFeeEur),
+        relocatePostFeeGbp: Number(form.relocatePostFeeGbp),
+        relocatePostFeeNgn: Number(form.relocatePostFeeNgn),
+        relocatePostFeeUsd: Number(form.relocatePostFeeUsd),
+        relocatePostFeeEur: Number(form.relocatePostFeeEur),
       });
       setForm(toForm(updated));
       setUpdatedAt(updated.updatedAt);
-      setSuccess('System listing fees saved. Landlord publish flow will use these values.');
+      setSuccess('System fees saved. Listing publish and relocate post will use these values.');
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -182,17 +194,42 @@ const ListingMonetizationConfigPage: React.FC = () => {
             <h3 className="text-lg font-bold text-gray-800">Fees by currency</h3>
             <p className="mt-1 text-sm text-gray-500">
               List fee applies after free quota. Premium fee is optional on top
-              (free+premium or paid+premium).
+              (free+premium or paid+premium). Relocate post fee is charged from
+              tenant wallets for Asher score 850+ premium matching.
             </p>
             <div className="mt-5 grid gap-6 lg:grid-cols-2">
               {(
                 [
-                  ['GBP', 'listFeeGbp', 'premiumFeeGbp', 'United Kingdom'],
-                  ['NGN', 'listFeeNgn', 'premiumFeeNgn', 'Nigeria'],
-                  ['USD', 'listFeeUsd', 'premiumFeeUsd', 'US dollar markets'],
-                  ['EUR', 'listFeeEur', 'premiumFeeEur', 'Euro markets'],
+                  [
+                    'GBP',
+                    'listFeeGbp',
+                    'premiumFeeGbp',
+                    'relocatePostFeeGbp',
+                    'United Kingdom',
+                  ],
+                  [
+                    'NGN',
+                    'listFeeNgn',
+                    'premiumFeeNgn',
+                    'relocatePostFeeNgn',
+                    'Nigeria',
+                  ],
+                  [
+                    'USD',
+                    'listFeeUsd',
+                    'premiumFeeUsd',
+                    'relocatePostFeeUsd',
+                    'US dollar markets',
+                  ],
+                  [
+                    'EUR',
+                    'listFeeEur',
+                    'premiumFeeEur',
+                    'relocatePostFeeEur',
+                    'Euro markets',
+                  ],
                 ] as const
-              ).map(([code, listKey, premiumKey, market]) => (
+              ).map(([code, listKey, premiumKey, relocateKey, market]) => (
                 <div
                   key={code}
                   className="rounded-2xl border border-gray-100 bg-gray-50/80 p-4"
@@ -201,7 +238,7 @@ const ListingMonetizationConfigPage: React.FC = () => {
                     {code}{' '}
                     <span className="font-medium text-gray-500">· {market}</span>
                   </p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <Field
                       label={`List fee (${code})`}
                       value={form[listKey]}
@@ -211,6 +248,12 @@ const ListingMonetizationConfigPage: React.FC = () => {
                       label={`Premium fee (${code})`}
                       value={form[premiumKey]}
                       onChange={(v) => setField(premiumKey, v)}
+                    />
+                    <Field
+                      label={`Relocate post (${code})`}
+                      value={form[relocateKey]}
+                      onChange={(v) => setField(relocateKey, v)}
+                      hint="Platform + referencing"
                     />
                   </div>
                 </div>

@@ -4,10 +4,10 @@ export type ListingMonetizationConfig = {
   freePerMonth: number;
   premiumDays: number;
   fees: {
-    GBP: { listFee: number; premiumFee: number };
-    NGN: { listFee: number; premiumFee: number };
-    USD: { listFee: number; premiumFee: number };
-    EUR: { listFee: number; premiumFee: number };
+    GBP: { listFee: number; premiumFee: number; relocatePostFee: number };
+    NGN: { listFee: number; premiumFee: number; relocatePostFee: number };
+    USD: { listFee: number; premiumFee: number; relocatePostFee: number };
+    EUR: { listFee: number; premiumFee: number; relocatePostFee: number };
   };
   updatedAt?: string;
   updatedById?: string | null;
@@ -24,6 +24,10 @@ export type ListingMonetizationUpdate = {
   premiumFeeUsd?: number;
   listFeeEur?: number;
   premiumFeeEur?: number;
+  relocatePostFeeGbp?: number;
+  relocatePostFeeNgn?: number;
+  relocatePostFeeUsd?: number;
+  relocatePostFeeEur?: number;
 };
 
 export const getListingMonetizationConfig =
