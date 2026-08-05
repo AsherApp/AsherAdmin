@@ -3,6 +3,7 @@ import api from '../config/api';
 export type ListingMonetizationConfig = {
   freePerMonth: number;
   premiumDays: number;
+  relocatePostFeeEnabled?: boolean;
   fees: {
     GBP: { listFee: number; premiumFee: number; relocatePostFee: number };
     NGN: { listFee: number; premiumFee: number; relocatePostFee: number };
@@ -28,6 +29,7 @@ export type ListingMonetizationUpdate = {
   relocatePostFeeNgn?: number;
   relocatePostFeeUsd?: number;
   relocatePostFeeEur?: number;
+  relocatePostFeeEnabled?: boolean;
 };
 
 export const getListingMonetizationConfig =

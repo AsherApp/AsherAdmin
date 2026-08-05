@@ -9,6 +9,7 @@ import {
 type FormState = {
   freePerMonth: string;
   premiumDays: string;
+  relocatePostFeeEnabled: boolean;
   listFeeGbp: string;
   premiumFeeGbp: string;
   listFeeNgn: string;
@@ -26,6 +27,7 @@ type FormState = {
 const toForm = (config: ListingMonetizationConfig): FormState => ({
   freePerMonth: String(config.freePerMonth),
   premiumDays: String(config.premiumDays),
+  relocatePostFeeEnabled: config.relocatePostFeeEnabled !== false,
   listFeeGbp: String(config.fees.GBP.listFee),
   premiumFeeGbp: String(config.fees.GBP.premiumFee),
   listFeeNgn: String(config.fees.NGN.listFee),
@@ -121,6 +123,7 @@ const ListingMonetizationConfigPage: React.FC = () => {
         relocatePostFeeNgn: Number(form.relocatePostFeeNgn),
         relocatePostFeeUsd: Number(form.relocatePostFeeUsd),
         relocatePostFeeEur: Number(form.relocatePostFeeEur),
+        relocatePostFeeEnabled: form.relocatePostFeeEnabled,
       });
       setForm(toForm(updated));
       setUpdatedAt(updated.updatedAt);
@@ -191,11 +194,39 @@ const ListingMonetizationConfigPage: React.FC = () => {
           </section>
 
           <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-800">Relocate post fee</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              When ON, Asher score 850+ tenants pay the relocate post fee from
+              their wallet on final submit. When OFF, the same submit runs with
+              no charge.
+            </p>
+            <label className="mt-4 flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={form.relocatePostFeeEnabled}
+                onChange={(e) => {
+                  setForm((prev) =>
+                    prev
+                      ? { ...prev, relocatePostFeeEnabled: e.target.checked }
+                      : prev
+                  );
+                  setSuccess('');
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm font-semibold text-gray-800">
+                Charge relocate post fee
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
             <h3 className="text-lg font-bold text-gray-800">Fees by currency</h3>
             <p className="mt-1 text-sm text-gray-500">
               List fee applies after free quota. Premium fee is optional on top
               (free+premium or paid+premium). Relocate post fee is charged from
-              tenant wallets for Asher score 850+ premium matching.
+              tenant wallets for Asher score 850+ premium matching when the
+              toggle above is ON.
             </p>
             <div className="mt-5 grid gap-6 lg:grid-cols-2">
               {(
