@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileAsset } from '../types';
-import { 
-  FileText, Image as ImageIcon, Download, Trash2, UploadCloud, Search, Plus, 
-  Smartphone, Globe, Server, HelpCircle, BookOpen, LayoutTemplate, Filter, 
-  Eye, Save, Bold, Italic, Underline, Strikethrough, List, ListOrdered, 
-  AlignLeft, AlignCenter, AlignRight, Heading1, Heading2, Type, Undo, Redo, 
-  ChevronLeft, Wand2, FileQuestion, Shield, ChevronDown, Briefcase, Check, Loader
+import {
+  FileText, Download, Search, Plus,
+  Smartphone, Globe, Server, HelpCircle, BookOpen, LayoutTemplate, Filter,
+  Eye, Save, Bold, Italic, Underline, Heading1, Heading2, List, ListOrdered,
+  ChevronLeft, Wand2, FileQuestion, ChevronDown, Briefcase, Loader
 } from 'lucide-react';
 import { generateDocumentTemplate } from '../services/geminiService';
 import { getSystemDetails } from '../utils/uiHelpers';
@@ -443,8 +442,14 @@ const FileLibrary: React.FC = () => {
                                  </td>
                                  <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                       <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-xl transition" title="Download"><Download size={18} /></button>
-                                       <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-xl transition" title="Delete"><Trash2 size={18} /></button>
+                                       <button
+                                          onClick={() => file.url && window.open(file.url, '_blank', 'noopener,noreferrer')}
+                                          disabled={!file.url}
+                                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-xl transition disabled:opacity-30 disabled:hover:text-gray-500 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                          title={file.url ? 'Download' : 'No file URL available'}
+                                       >
+                                          <Download size={18} />
+                                       </button>
                                     </div>
                                  </td>
                               </tr>
