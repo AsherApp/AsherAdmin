@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw, Clock } from 'lucide-react';
 import {
   approveLandlordIdentity,
   getPendingIdentityVerifications,
@@ -74,6 +74,7 @@ const IdentityVerificationReview: React.FC = () => {
           </h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
             Review landlord ID uploads before leasing and application features unlock.
+            UK landlords are cleared automatically by Stripe Connect's own KYC — those rows are view-only.
           </p>
         </div>
         <button
@@ -119,6 +120,11 @@ const IdentityVerificationReview: React.FC = () => {
                     Submitted {new Date(item.submittedAt).toLocaleString()}
                   </p>
                 )}
+                {item.verifiedVia === 'stripe' && (
+                  <p className="text-xs text-blue-600 font-bold mt-1">
+                    UK landlord — cleared by Stripe, not admin
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {item.documentUrls.map((url, index) => (
                     <a
@@ -135,26 +141,35 @@ const IdentityVerificationReview: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => void handleApprove(item.landlordId)}
-                  disabled={actionId === item.landlordId}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
-                >
-                  {actionId === item.landlordId ? (
-                    <Loader size={16} className="animate-spin" />
-                  ) : (
-                    <Check size={16} />
-                  )}
-                  Approve
-                </button>
-                <button
-                  onClick={() => void handleReject(item.landlordId)}
-                  disabled={actionId === item.landlordId}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold disabled:opacity-50"
-                >
-                  <X size={16} />
-                  Reject
-                </button>
+                {item.verifiedVia === 'stripe' ? (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-700 text-sm font-bold border border-blue-100">
+                    <Clock size={16} />
+                    {item.stripeDetailsSubmitted ? 'Verifying with Stripe' : 'Awaiting Stripe onboarding'}
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => void handleApprove(item.landlordId)}
+                      disabled={actionId === item.landlordId}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
+                    >
+                      {actionId === item.landlordId ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Check size={16} />
+                      )}
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => void handleReject(item.landlordId)}
+                      disabled={actionId === item.landlordId}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold disabled:opacity-50"
+                    >
+                      <X size={16} />
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}

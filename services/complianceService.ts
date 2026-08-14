@@ -12,6 +12,10 @@ export type ComplianceOverviewRow = {
   missing: string[];
   expiringSoon: string[];
   expired: string[];
+  meesBlocked?: boolean;
+  unprotectedDeposits?: number;
+  statutoryOverdue?: number;
+  licensingIncomplete?: boolean;
 };
 
 export type ComplianceOverviewResponse = {
@@ -20,6 +24,10 @@ export type ComplianceOverviewResponse = {
     averageCompleteness: number;
     incompleteProperties: number;
     propertiesWithExpiredCerts: number;
+    meesBlockedProperties?: number;
+    unprotectedDeposits?: number;
+    statutoryOverdue?: number;
+    licensingIncomplete?: number;
   };
   properties: ComplianceOverviewRow[];
   generatedAt: string;

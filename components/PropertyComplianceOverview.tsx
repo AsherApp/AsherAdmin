@@ -64,12 +64,16 @@ const PropertyComplianceOverview: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-4">
         {[
           { label: 'Properties tracked', value: summary?.totalProperties ?? 0, icon: Building2 },
           { label: 'Avg completeness', value: `${summary?.averageCompleteness ?? 0}%`, icon: ShieldCheck },
           { label: 'Incomplete profiles', value: summary?.incompleteProperties ?? 0, icon: AlertTriangle },
           { label: 'Expired cert issues', value: summary?.propertiesWithExpiredCerts ?? 0, icon: AlertTriangle },
+          { label: 'Energy letting blocks', value: summary?.meesBlockedProperties ?? 0, icon: AlertTriangle },
+          { label: 'Unprotected deposits', value: summary?.unprotectedDeposits ?? 0, icon: AlertTriangle },
+          { label: 'Documents overdue', value: summary?.statutoryOverdue ?? 0, icon: AlertTriangle },
+          { label: 'Licensing incomplete', value: summary?.licensingIncomplete ?? 0, icon: AlertTriangle },
         ].map((card) => (
           <div key={card.label} className="glass-panel rounded-2xl p-5">
             <card.icon size={20} className="text-red-500 mb-2" />
@@ -85,7 +89,7 @@ const PropertyComplianceOverview: React.FC = () => {
             <tr>
               <th className="text-left p-4 font-semibold">Property</th>
               <th className="text-left p-4 font-semibold">Landlord</th>
-              <th className="text-left p-4 font-semibold">Market</th>
+              <th className="text-left p-4 font-semibold">Location</th>
               <th className="text-left p-4 font-semibold">Score</th>
               <th className="text-left p-4 font-semibold">Issues</th>
             </tr>
@@ -109,8 +113,15 @@ const PropertyComplianceOverview: React.FC = () => {
                   </span>
                 </td>
                 <td className="p-4 text-xs text-gray-600">
-                  {[...row.expired.map((e) => `Expired: ${e}`), ...row.missing.map((m) => `Missing: ${m}`)]
-                    .slice(0, 3)
+                  {[
+                    ...row.expired.map((e) => `Expired: ${e}`),
+                    ...row.missing.map((m) => `Missing: ${m}`),
+                    ...(row.meesBlocked ? ['Energy rating too low to let'] : []),
+                    ...(row.unprotectedDeposits ? [`${row.unprotectedDeposits} unprotected deposit(s)`] : []),
+                    ...(row.statutoryOverdue ? [`${row.statutoryOverdue} document(s) overdue`] : []),
+                    ...(row.licensingIncomplete ? ['Licensing reference missing'] : []),
+                  ]
+                    .slice(0, 4)
                     .join(' · ') || '—'}
                 </td>
               </tr>
