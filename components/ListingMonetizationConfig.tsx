@@ -22,6 +22,13 @@ type FormState = {
   relocatePostFeeNgn: string;
   relocatePostFeeUsd: string;
   relocatePostFeeEur: string;
+  adBaseGbp: string;
+  adBaseNgn: string;
+  adBaseUsd: string;
+  adBaseEur: string;
+  adDurationIncreasePercent: string;
+  adLocationIncreasePercent: string;
+  adBannerPremiumPercent: string;
 };
 
 const toForm = (config: ListingMonetizationConfig): FormState => ({
@@ -40,6 +47,13 @@ const toForm = (config: ListingMonetizationConfig): FormState => ({
   relocatePostFeeNgn: String(config.fees.NGN.relocatePostFee ?? 15000),
   relocatePostFeeUsd: String(config.fees.USD.relocatePostFee ?? 30),
   relocatePostFeeEur: String(config.fees.EUR.relocatePostFee ?? 28),
+  adBaseGbp: String(config.ads?.base?.GBP ?? 5),
+  adBaseNgn: String(config.ads?.base?.NGN ?? 5000),
+  adBaseUsd: String(config.ads?.base?.USD ?? 5),
+  adBaseEur: String(config.ads?.base?.EUR ?? 5),
+  adDurationIncreasePercent: String(config.ads?.durationIncreasePercent ?? 30),
+  adLocationIncreasePercent: String(config.ads?.locationIncreasePercent ?? 30),
+  adBannerPremiumPercent: String(config.ads?.bannerPremiumPercent ?? 50),
 });
 
 const Field = ({
@@ -124,10 +138,17 @@ const ListingMonetizationConfigPage: React.FC = () => {
         relocatePostFeeUsd: Number(form.relocatePostFeeUsd),
         relocatePostFeeEur: Number(form.relocatePostFeeEur),
         relocatePostFeeEnabled: form.relocatePostFeeEnabled,
+        adBaseGbp: Number(form.adBaseGbp),
+        adBaseNgn: Number(form.adBaseNgn),
+        adBaseUsd: Number(form.adBaseUsd),
+        adBaseEur: Number(form.adBaseEur),
+        adDurationIncreasePercent: Number(form.adDurationIncreasePercent),
+        adLocationIncreasePercent: Number(form.adLocationIncreasePercent),
+        adBannerPremiumPercent: Number(form.adBannerPremiumPercent),
       });
       setForm(toForm(updated));
       setUpdatedAt(updated.updatedAt);
-      setSuccess('System fees saved. Listing publish and relocate post will use these values.');
+      setSuccess('System fees saved. Listings, relocate posts, and tenant ads will use these values.');
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -144,11 +165,12 @@ const ListingMonetizationConfigPage: React.FC = () => {
       <div>
         <h2 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-gray-800">
           <Settings2 className="text-red-600" />
-          Listing monetization
+          Listing & ads pricing
         </h2>
         <p className="mt-1 text-sm font-medium text-gray-600">
-          Platform system config for free monthly listings, paid publish fees, and
-          premium pins. Charged from landlord wallets by property currency.
+          Platform system config for listings, relocate posts, and tenant ads.
+          Charged from landlord or tenant wallets by currency. Ads money goes
+          to the Admin wallet.
         </p>
         {updatedAt ? (
           <p className="mt-1 text-xs text-gray-400">
@@ -289,6 +311,58 @@ const ListingMonetizationConfigPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-800">Tenant ads</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Base price per currency. Extra days after day 1 add the duration
+              percent. Each 10 km after the first 10 km adds the location
+              percent. Banner ads add the banner percent. The backend charges
+              this quote, not the amount the tenant app sends.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <Field
+                label="Duration increase (%)"
+                value={form.adDurationIncreasePercent}
+                onChange={(v) => setField('adDurationIncreasePercent', v)}
+                hint="Per extra day after day 1."
+              />
+              <Field
+                label="Location increase (%)"
+                value={form.adLocationIncreasePercent}
+                onChange={(v) => setField('adLocationIncreasePercent', v)}
+                hint="Per 10 km after the first 10 km."
+              />
+              <Field
+                label="Banner premium (%)"
+                value={form.adBannerPremiumPercent}
+                onChange={(v) => setField('adBannerPremiumPercent', v)}
+                hint="Extra on top of duration and radius."
+              />
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Field
+                label="Ad base (GBP)"
+                value={form.adBaseGbp}
+                onChange={(v) => setField('adBaseGbp', v)}
+              />
+              <Field
+                label="Ad base (NGN)"
+                value={form.adBaseNgn}
+                onChange={(v) => setField('adBaseNgn', v)}
+              />
+              <Field
+                label="Ad base (USD)"
+                value={form.adBaseUsd}
+                onChange={(v) => setField('adBaseUsd', v)}
+              />
+              <Field
+                label="Ad base (EUR)"
+                value={form.adBaseEur}
+                onChange={(v) => setField('adBaseEur', v)}
+              />
             </div>
           </section>
 

@@ -11,6 +11,7 @@ import VendorManagement from './components/VendorManagement';
 import VendorVerificationReview from './components/VendorVerificationReview';
 import VendorDocumentRequirements from './components/VendorDocumentRequirements';
 import ListingMonetizationConfig from './components/ListingMonetizationConfig';
+import PlatformFinance from './components/PlatformFinance';
 import PropertyComplianceOverview from './components/PropertyComplianceOverview';
 import Inbox from './components/Inbox';
 import EmailSystem from './components/EmailSystem';
@@ -190,6 +191,7 @@ const DashboardLayout: React.FC = () => {
       case 'vendor-verification': return <VendorVerificationReview />;
       case 'vendor-document-requirements': return <VendorDocumentRequirements />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
+      case 'finance': return <PlatformFinance />;
       case 'compliance': return <PropertyComplianceOverview />;
       case 'tickets': return <TicketSystem />;
       case 'inbox': return <Inbox />;

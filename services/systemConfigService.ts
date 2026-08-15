@@ -10,6 +10,17 @@ export type ListingMonetizationConfig = {
     USD: { listFee: number; premiumFee: number; relocatePostFee: number };
     EUR: { listFee: number; premiumFee: number; relocatePostFee: number };
   };
+  ads?: {
+    durationIncreasePercent: number;
+    locationIncreasePercent: number;
+    bannerPremiumPercent: number;
+    base: {
+      GBP: number;
+      NGN: number;
+      USD: number;
+      EUR: number;
+    };
+  };
   updatedAt?: string;
   updatedById?: string | null;
 };
@@ -30,6 +41,13 @@ export type ListingMonetizationUpdate = {
   relocatePostFeeUsd?: number;
   relocatePostFeeEur?: number;
   relocatePostFeeEnabled?: boolean;
+  adBaseGbp?: number;
+  adBaseNgn?: number;
+  adBaseUsd?: number;
+  adBaseEur?: number;
+  adDurationIncreasePercent?: number;
+  adLocationIncreasePercent?: number;
+  adBannerPremiumPercent?: number;
 };
 
 export const getListingMonetizationConfig =
