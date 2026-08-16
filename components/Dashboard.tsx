@@ -23,6 +23,7 @@ const Dashboard: React.FC = () => {
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [backendHealth, setBackendHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -34,39 +35,17 @@ const Dashboard: React.FC = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Loading dashboard data...');
+      setError('');
       const [statsData, activityData, health] = await Promise.all([
         getSystemStats(),
         getActivityData(),
         getSystemHealth().catch(() => null),
       ]);
-      console.log('✅ Dashboard data loaded:', { statsData, activityData, health });
       setStats(statsData);
       setActivityData(activityData);
       setBackendHealth(health);
     } catch (error: any) {
-      console.error('❌ Error loading dashboard data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        response: error.response,
-      });
-      // Set empty stats on error to prevent UI breaking
-      setStats({
-        totalUsers: 0,
-        totalTenants: 0,
-        totalProperties: 0,
-        openTickets: 0,
-        resolvedTickets: 0,
-        totalTickets: 0,
-        totalEmails: 0,
-        unreadEmails: 0,
-        totalDocuments: 0,
-        activeUsers: 0,
-        userGrowth: 0,
-      });
-      setActivityData([]);
-      setBackendHealth(null);
+      setError(error?.message || 'Dashboard data could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -79,13 +58,20 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
+  if (error && !stats) {
+    return <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center"><h2 className="font-bold text-red-800">Dashboard unavailable</h2><p className="mt-1 text-sm text-red-700">{error}</p><button onClick={() => void loadDashboardData()} className="mt-4 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white">Try again</button></div>;
+  }
+  const deployments = backendHealth?.systems || [];
+  const healthyDeployments = deployments.filter((system) => system.status === 'OPERATIONAL').length;
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Dashboard Overview</h2>
-        <p className="text-gray-600 text-sm mt-1 font-medium">Welcome back. Here is what's happening across the nexus.</p>
+        <p className="text-gray-600 text-sm mt-1 font-medium">Welcome back. Here is what is happening across the Asher suite.</p>
       </div>
+
+      {error && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Some dashboard data could not refresh: {error}</div>}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -121,7 +107,7 @@ const Dashboard: React.FC = () => {
           <div>
             <p className="text-sm text-gray-500 font-semibold uppercase tracking-wider">Active Users</p>
             <h3 className="text-3xl font-bold text-gray-800 mt-1">{stats?.activeUsers || 0}</h3>
-            <span className="text-xs text-gray-500 font-medium mt-2 block px-1">Currently online</span>
+            <span className="text-xs text-gray-500 font-medium mt-2 block px-1">Active in the last 15 minutes</span>
           </div>
           <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-blue-500/30">
             <Activity size={24} />
@@ -178,35 +164,17 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Backend Status — real data only; the other apps (tenant/vendor
-            mobile, listing website) have no health-check endpoint yet, so
-            we don't fabricate scores for them here. */}
+        {/* Direct deployment status; detailed checks live in System Monitor. */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col">
-          <h3 className="font-bold text-gray-800 mb-6 text-lg">Backend Status</h3>
-          {backendHealth ? (
+          <h3 className="font-bold text-gray-800 mb-6 text-lg">Deployment Status</h3>
+          {deployments.length ? (
             <div className="flex-1 flex flex-col justify-center gap-4">
               <div className="flex items-center gap-3">
-                <span className={`w-3 h-3 rounded-full ${
-                  backendHealth.status === 'OPERATIONAL' ? 'bg-green-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' :
-                  backendHealth.status === 'DEGRADED' ? 'bg-yellow-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]' :
-                  backendHealth.status === 'MAINTENANCE' ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]' :
-                  'bg-red-600 shadow-[0_0_12px_rgba(220,38,38,0.5)]'
-                } animate-pulse`}></span>
-                <span className="text-lg font-bold text-gray-800">{backendHealth.name || 'Rent Mgmt System'}</span>
+                <span className={`w-3 h-3 rounded-full ${healthyDeployments === deployments.length ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`}></span>
+                <span className="text-lg font-bold text-gray-800">{healthyDeployments} of {deployments.length} operational</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/30 rounded-xl p-3 border border-white/40">
-                  <p className="text-xs text-gray-500 font-medium mb-1">Status</p>
-                  <p className="text-sm font-bold text-gray-800">{backendHealth.status}</p>
-                </div>
-                <div className="bg-white/30 rounded-xl p-3 border border-white/40">
-                  <p className="text-xs text-gray-500 font-medium mb-1">Uptime</p>
-                  <p className="text-sm font-bold text-gray-800">{Math.round(backendHealth.uptime || 0)}%</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400 font-medium">
-                Other apps (tenant/vendor mobile, listing website) aren't wired to live monitoring yet — see System Monitor.
-              </p>
+              <div className="space-y-2">{deployments.slice(0, 4).map((system) => <div key={system.id} className="flex items-center justify-between rounded-xl bg-white/40 px-3 py-2 text-xs"><span className="font-semibold text-gray-700">{system.name}</span><span className={system.status === 'OPERATIONAL' ? 'font-bold text-emerald-700' : system.status === 'NOT_CONFIGURED' ? 'font-bold text-gray-500' : 'font-bold text-amber-700'}>{system.status.replace('_', ' ')}</span></div>)}</div>
+              <p className="text-xs text-gray-400 font-medium">Current reachability only; open System Monitor for providers, latency and configuration gaps.</p>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm font-medium">
@@ -242,17 +210,12 @@ const Dashboard: React.FC = () => {
                   <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
                </div>
             )}
-            {backendHealth && (
+            {deployments.length > 0 && (
                <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/60 hover:bg-white/60 transition-colors">
                   <div className="flex items-center gap-4">
-                     <div className={`w-3 h-3 rounded-full ${
-                       backendHealth.status === 'OPERATIONAL' ? 'bg-green-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]' :
-                       backendHealth.status === 'DEGRADED' ? 'bg-yellow-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' :
-                       backendHealth.status === 'MAINTENANCE' ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]' :
-                       'bg-red-600 shadow-[0_0_12px_rgba(220,38,38,0.4)]'
-                     }`}></div>
+                     <div className={`w-3 h-3 rounded-full ${healthyDeployments === deployments.length ? 'bg-green-500' : 'bg-amber-500'}`}></div>
                      <span className="text-sm font-semibold text-gray-800">
-                        {backendHealth.name || 'Rent Management System'} {backendHealth.status === 'OPERATIONAL' ? 'Operational' : backendHealth.status.charAt(0) + backendHealth.status.slice(1).toLowerCase()}
+                        Deployment check: {healthyDeployments} operational, {deployments.length - healthyDeployments} need attention or configuration
                      </span>
                   </div>
                   <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>

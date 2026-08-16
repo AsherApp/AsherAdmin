@@ -4,7 +4,7 @@ export enum SystemStatus {
   DEGRADED = 'Degraded',
   MAINTENANCE = 'Maintenance',
   DOWN = 'Down',
-  NOT_MONITORED = 'Not monitored'
+  NOT_MONITORED = 'Not configured'
 }
 
 export enum TicketPriority {
@@ -24,12 +24,15 @@ export enum TicketStatus {
 export interface MonitoredSystem {
   id: string;
   name: string;
-  type: 'Mobile App' | 'Web App' | 'Website';
+  type: 'API' | 'Mobile App' | 'Desktop App' | 'Web App' | 'Website';
   status: SystemStatus;
-  uptime: number | null; // percentage; null when not yet integrated with live monitoring
-  activeUsers: number | null;
-  lastCheck: string;
-  version: string;
+  provider: 'Railway' | 'Vercel' | 'Expo / EAS' | 'Local' | 'Unknown';
+  url: string | null;
+  latencyMs: number | null;
+  checkedAt: string;
+  detail: string;
+  version?: string;
+  processUptimeSeconds?: number;
 }
 
 export interface TicketHistory {
@@ -54,6 +57,8 @@ export interface Ticket {
   aiSummary?: string;
   messages: TicketMessage[];
   history?: TicketHistory[];
+  type?: 'SUPPORT' | 'SUGGESTION' | 'DISPUTE';
+  maintenance?: Record<string, any>;
 }
 
 export interface TicketMessage {
@@ -70,10 +75,11 @@ export interface FileAsset {
   type: string;
   uploadedAt: string;
   // New fields for Asher Admin
-  category: 'Legal' | 'Invoice' | 'Image' | 'Other' | 'Template' | 'FAQ' | 'Guide';
+  category: 'Legal' | 'Invoice' | 'Image' | 'Other' | 'Template' | 'FAQ' | 'Guide' | 'Book' | 'News' | 'Tutorial' | 'Handbook' | 'HowTo';
   systemId: string; // '1', '2', '3', '4', '5' or 'all'
   content?: string; // For created docs
   status?: 'Draft' | 'Published';
+  url?: string;
 }
 
 export interface UserProfile {

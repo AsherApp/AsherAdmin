@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChatThread, ChatMessage } from '../types';
-import { Search, Send, Paperclip, MoreVertical, Phone, Video, Monitor, Wand2, Loader } from 'lucide-react';
+import { Search, Send, Paperclip, Monitor, Wand2, Loader } from 'lucide-react';
 import { generateSmartReplies } from '../services/geminiService';
 import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRoom, ChatMessage as ApiChatMessage } from '../services/chatService';
+import { getCurrentUser } from '../services/authService';
 
 const Inbox: React.FC = () => {
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -12,6 +13,10 @@ const Inbox: React.FC = () => {
   const [isGeneratingReplies, setIsGeneratingReplies] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+  const attachmentRef = useRef<HTMLInputElement>(null);
+  const currentUserId = getCurrentUser()?.id;
 
   const activeThread = threads.find(t => t.id === activeThreadId);
 
@@ -36,7 +41,7 @@ const Inbox: React.FC = () => {
       setLoading(true);
       const chatRooms = await getChatRooms();
       
-      // Map chat rooms to threads - show ALL conversations
+      setError('');
       const mappedThreads: ChatThread[] = chatRooms.map((room: ChatRoom) => {
         // Get both users to show the conversation
         const user1 = room.user1;
@@ -52,9 +57,8 @@ const Inbox: React.FC = () => {
                            ? `${user2.profile.firstName} ${user2.profile.lastName}`.trim()
                            : user2?.email?.split('@')[0] || 'User 2');
         
-        // Display both users in the conversation name
-        const displayUser = user2 || user1;
-        const userName = user2 ? `${user1Name} ↔ ${user2Name}` : user1Name;
+        const displayUser = room.user1Id === currentUserId ? user2 : user1;
+        const userName = room.user1Id === currentUserId ? user2Name : user1Name;
         
         // Get last message from room messages if available
         const lastMessage = room.messages && room.messages.length > 0 
@@ -71,16 +75,17 @@ const Inbox: React.FC = () => {
             ? new Date(lastMessage.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
             : 'No messages',
           unreadCount: 0, // TODO: Implement unread count
-          messages: [], // Will be loaded separately when thread is selected
+          messages: [],
         };
       });
       
-      setThreads(mappedThreads);
+      setThreads((previous) => mappedThreads.map((thread) => ({ ...thread, messages: previous.find((item) => item.id === thread.id)?.messages || [] })));
       if (mappedThreads.length > 0 && !activeThreadId) {
         setActiveThreadId(mappedThreads[0].id);
       }
-    } catch (error) {
-      console.error('Error loading chat rooms:', error);
+      if (activeThreadId) void loadChatMessages(activeThreadId);
+    } catch (error: any) {
+      setError(error?.message || 'Admin conversations could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -92,10 +97,7 @@ const Inbox: React.FC = () => {
       const messages = await getChatRoomMessages(chatRoomId);
       const mappedMessages: ChatMessage[] = messages.map((msg: ApiChatMessage) => {
         // Determine if message is from admin (me) or other user
-        const senderEmail = msg.sender?.email || '';
-        const isFromMe = senderEmail.toLowerCase().includes('admin') || 
-                        senderEmail.toLowerCase().includes('nexusprop') ||
-                        false;
+        const isFromMe = msg.senderId === currentUserId;
         
         return {
           id: msg.id,
@@ -119,10 +121,7 @@ const Inbox: React.FC = () => {
         try {
           const messages = await getChatMessages(thread.userId);
           const mappedMessages: ChatMessage[] = messages.map((msg: ApiChatMessage) => {
-            const senderEmail = msg.sender?.email || '';
-            const isFromMe = senderEmail.toLowerCase().includes('admin') || 
-                            senderEmail.toLowerCase().includes('nexusprop') ||
-                            false;
+            const isFromMe = msg.senderId === currentUserId;
             
             return {
               id: msg.id,
@@ -189,22 +188,34 @@ const Inbox: React.FC = () => {
       
       setNewMessage('');
       setSmartReplies([]);
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch (error: any) {
+      setError(error?.message || 'Message could not be sent.');
     } finally {
       setSending(false);
     }
   };
 
+  const handleAttachment = async (file?: File) => {
+    if (!file || !activeThread) return;
+    setSending(true); setError('');
+    try {
+      await sendMessage(activeThread.userId, newMessage.trim() || `Attachment: ${file.name}`, [file]);
+      setNewMessage('');
+      await loadChatMessages(activeThread.id);
+    } catch (error: any) { setError(error?.message || 'Attachment could not be sent.'); }
+    finally { setSending(false); if (attachmentRef.current) attachmentRef.current.value = ''; }
+  };
+
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6 overflow-hidden">
+    <div className="flex h-[calc(100vh-100px)] gap-6 overflow-hidden relative">
+      {error && <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-800 shadow">{error}</div>}
       {/* Sidebar List */}
       <div className="w-80 flex flex-col glass-panel rounded-3xl border border-white/40">
         <div className="p-5 border-b border-white/40 bg-white/20 backdrop-blur-md">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Inbox</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Admin Chat</h2>
           <div className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-            <input type="text" placeholder="Search messages..." className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium placeholder-gray-400"/>
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations..." className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium placeholder-gray-400"/>
           </div>
         </div>
         
@@ -219,7 +230,7 @@ const Inbox: React.FC = () => {
               <p className="font-bold text-sm">No conversations yet</p>
             </div>
           ) : (
-            threads.map(thread => (
+            threads.filter((thread) => `${thread.userName} ${thread.lastMessage}`.toLowerCase().includes(search.toLowerCase())).map(thread => (
             <div key={thread.id} onClick={() => setActiveThreadId(thread.id)} className={`p-5 border-b border-white/20 cursor-pointer transition-all hover:bg-white/40 ${activeThreadId === thread.id ? 'bg-red-50/60 border-l-4 border-l-red-600 backdrop-blur-sm' : 'border-l-4 border-l-transparent'}`}>
               <div className="flex justify-between mb-1.5">
                 <span className={`font-bold text-sm ${activeThreadId === thread.id ? 'text-red-700' : 'text-gray-800'}`}>{thread.userName}</span>
@@ -244,16 +255,8 @@ const Inbox: React.FC = () => {
                 <div className="w-11 h-11 rounded-full bg-white/50 flex items-center justify-center font-bold text-gray-600 shadow-inner border border-white/50 text-lg">{activeThread.userName.charAt(0)}</div>
                 <div>
                   <h3 className="font-bold text-gray-800">{activeThread.userName}</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
-                    <span className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                    Online via Rent Mgmt System
-                  </div>
+                  <div className="text-xs text-gray-500 font-medium">Admin-participant conversation</div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                 <button className="p-2.5 text-gray-500 hover:bg-white/60 hover:text-red-600 rounded-xl transition"><Phone size={20} /></button>
-                 <button className="p-2.5 text-gray-500 hover:bg-white/60 hover:text-red-600 rounded-xl transition"><Video size={20} /></button>
-                 <button className="p-2.5 text-gray-500 hover:bg-white/60 hover:text-red-600 rounded-xl transition"><MoreVertical size={20} /></button>
               </div>
             </div>
 
@@ -287,7 +290,8 @@ const Inbox: React.FC = () => {
               )}
 
               <div className="flex items-center gap-3">
-                <button className="p-3 text-gray-500 hover:text-red-600 hover:bg-white/50 rounded-xl transition"><Paperclip size={20} /></button>
+                <input ref={attachmentRef} type="file" className="hidden" onChange={(e) => void handleAttachment(e.target.files?.[0])} />
+                <button onClick={() => attachmentRef.current?.click()} disabled={sending} aria-label="Attach file" className="p-3 text-gray-500 hover:text-red-600 hover:bg-white/50 rounded-xl transition disabled:opacity-50"><Paperclip size={20} /></button>
                 <div className="flex-1 relative">
                    <input 
                     type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}

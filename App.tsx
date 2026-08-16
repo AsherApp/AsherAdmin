@@ -1,25 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import SystemMonitor from './components/SystemMonitor';
-import TicketSystem from './components/TicketSystem';
-import FileLibrary from './components/FileLibrary';
-import LandlordsSection from './components/LandlordsSection';
-import VendorsSection from './components/VendorsSection';
-import ListingMonetizationConfig from './components/ListingMonetizationConfig';
-import PlatformFinance from './components/PlatformFinance';
-import FinancialReports from './components/FinancialReports';
-import PropertyComplianceOverview from './components/PropertyComplianceOverview';
-import Inbox from './components/Inbox';
-import EmailSystem from './components/EmailSystem';
-import Settings from './components/Settings';
-import SupportContent from './components/SupportContent';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import Sidebar, { ADMIN_MENU_ITEMS } from './components/Sidebar';
 import Login from './pages/Login';
 import SetPassword from './pages/SetPassword';
 import { Menu, Bell, CheckCircle, AlertTriangle, Info, MessageCircle } from 'lucide-react';
 import { AppNotification } from './types';
-import { getCurrentUser, isAuthenticated } from './services/authService';
+import { getCurrentUser, isAdminUser, isAuthenticated, logout } from './services/authService';
 import { getAllNotifications, markAllAsRead, clearAllNotifications, markAsRead, Notification } from './services/notificationService';
 import {
   connectAdminNotifications,
@@ -27,9 +13,25 @@ import {
   subscribeAdminLiveNotifications,
 } from './services/notificationSocket';
 
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const SystemMonitor = lazy(() => import('./components/SystemMonitor'));
+const TicketSystem = lazy(() => import('./components/TicketSystem'));
+const FileLibrary = lazy(() => import('./components/FileLibrary'));
+const LandlordsSection = lazy(() => import('./components/LandlordsSection'));
+const VendorsSection = lazy(() => import('./components/VendorsSection'));
+const ListingMonetizationConfig = lazy(() => import('./components/ListingMonetizationConfig'));
+const PlatformFinance = lazy(() => import('./components/PlatformFinance'));
+const FinancialReports = lazy(() => import('./components/FinancialReports'));
+const PropertyComplianceOverview = lazy(() => import('./components/PropertyComplianceOverview'));
+const Inbox = lazy(() => import('./components/Inbox'));
+const EmailSystem = lazy(() => import('./components/EmailSystem'));
+const Settings = lazy(() => import('./components/Settings'));
+const SupportContent = lazy(() => import('./components/SupportContent'));
+
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (!isAuthenticated()) {
+  if (!isAuthenticated() || !isAdminUser()) {
+    logout();
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
@@ -73,7 +75,11 @@ const convertNotification = (notif: Notification): AppNotification => {
 
 // Main Dashboard Layout Component
 const DashboardLayout: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeTab = location.pathname.split('/').filter(Boolean)[0] || 'dashboard';
+  const currentTab = ADMIN_MENU_ITEMS.some((item) => item.id === routeTab) || routeTab === 'settings' ? routeTab : 'dashboard';
+  const setCurrentTab = (tab: string) => navigate(tab === 'dashboard' ? '/' : `/${tab}`);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -81,6 +87,7 @@ const DashboardLayout: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(true);
+  const [notificationError, setNotificationError] = useState('');
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -90,10 +97,11 @@ const DashboardLayout: React.FC = () => {
         setLoadingNotifications(true);
       }
       const response = await getAllNotifications();
+      setNotificationError('');
       const converted = response.notifications.map(convertNotification);
       setNotifications(converted);
-    } catch (error) {
-      console.error('Error loading notifications:', error);
+    } catch (error: any) {
+      setNotificationError(error?.message || 'Notifications could not be loaded.');
     } finally {
       if (!opts?.silent) {
         setLoadingNotifications(false);
@@ -171,7 +179,12 @@ const DashboardLayout: React.FC = () => {
         );
       }
       if (notification.actionLink) {
-        window.location.href = notification.actionLink;
+        try {
+          const target = new URL(notification.actionLink, window.location.origin);
+          if (target.origin === window.location.origin) navigate(target.pathname + target.search);
+        } catch {
+          // Ignore malformed or external routes from notification payloads.
+        }
       }
       setShowNotifications(false);
     } catch (error) {
@@ -219,7 +232,7 @@ const DashboardLayout: React.FC = () => {
       
       {/* Mobile Header - Glass */}
       <div className="md:hidden fixed top-0 w-full bg-red-600/90 backdrop-blur-md border-b border-white/20 z-30 flex items-center justify-between px-4 h-16 shadow-lg">
-         <span className="text-white font-bold text-lg tracking-wide">NexusProp</span>
+         <span className="text-white font-bold text-lg tracking-wide">Asher Admin</span>
          <div className="flex items-center gap-2">
             <button 
                onClick={() => setShowNotifications(!showNotifications)}
@@ -270,6 +283,7 @@ const DashboardLayout: React.FC = () => {
                </div>
                
                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
+                  {notificationError && <div className="m-2 rounded-xl bg-red-50 p-3 text-xs text-red-800">{notificationError}</div>}
                   {loadingNotifications ? (
                      <div className="p-8 text-center text-gray-400">
                         <Bell size={32} className="mx-auto mb-2 opacity-20 animate-pulse" />
@@ -301,9 +315,6 @@ const DashboardLayout: React.FC = () => {
                      </div>
                   )}
                </div>
-               <div className="p-3 border-t border-white/30 bg-white/20 text-center">
-                  <button className="text-xs font-bold text-red-600 hover:text-red-800 transition">View All Activity</button>
-               </div>
             </div>
          )}
       </div>
@@ -312,15 +323,9 @@ const DashboardLayout: React.FC = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 glass-modal-overlay z-40 md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
            <div className="glass-panel w-64 h-full pt-20 px-4 border-r border-white/50" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => { setCurrentTab('dashboard'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Dashboard</button>
-              <button onClick={() => { setCurrentTab('systems'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Systems</button>
-              <button onClick={() => { setCurrentTab('landlords'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Landlords</button>
-              <button onClick={() => { setCurrentTab('vendors'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Vendors</button>
-              <button onClick={() => { setCurrentTab('tickets'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Tickets</button>
-              <button onClick={() => { setCurrentTab('email'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Internal Mail</button>
-              <button onClick={() => { setCurrentTab('inbox'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Live Chat</button>
-              <button onClick={() => { setCurrentTab('files'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Files</button>
-              <button onClick={() => { setCurrentTab('settings'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Settings</button>
+              {[...ADMIN_MENU_ITEMS, { id: 'settings', label: 'Settings', icon: Info }].map((item) => (
+                <button key={item.id} onClick={() => { setCurrentTab(item.id); setIsMobileMenuOpen(false); }} className={`block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all ${currentTab === item.id ? 'text-red-700 bg-white/60' : ''}`}>{item.label}</button>
+              ))}
            </div>
         </div>
       )}
@@ -328,7 +333,7 @@ const DashboardLayout: React.FC = () => {
       {/* Main Content Area */}
       <main className={`flex-1 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} p-6 md:px-8 md:pb-8 md:pt-16 pt-20 transition-all duration-300 ease-in-out`}>
         <div className="max-w-7xl mx-auto">
-          {renderContent()}
+          <Suspense fallback={<div className="h-72 flex items-center justify-center text-sm font-medium text-gray-500">Loading section…</div>}>{renderContent()}</Suspense>
         </div>
       </main>
     </div>

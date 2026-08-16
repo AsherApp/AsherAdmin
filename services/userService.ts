@@ -69,14 +69,14 @@ export const inviteLandlordForFE = async (userData: {
   phoneNumber?: string;
 }): Promise<{ userId: string; email: string; invitationLink?: string; emailSent?: boolean; emailError?: string }> => {
   const response = await inviteLandlord(userData);
-  return response.data || response;
+  return response.data;
 };
 
 /**
  * Create user for AsherLandlordFE (DEPRECATED)
  * @deprecated Use inviteLandlordForFE() instead - it follows the proper invitation flow
  */
-export const createUserForFE = async (userData: CreateUserData): Promise<User> => {
+export const createUserForFE = async (userData: CreateUserData): Promise<any> => {
   // This is deprecated - use inviteLandlordForFE instead
   const response = await inviteLandlord({
     email: userData.email,
@@ -84,17 +84,14 @@ export const createUserForFE = async (userData: CreateUserData): Promise<User> =
     lastName: userData.lastName,
     phoneNumber: userData.phoneNumber,
   });
-  return response.data || response;
+  return response.data;
 };
 
 /**
  * Get all landlords (users) for Rent Management System
  */
 export const getAllLandlords = async (page: number = 1, limit: number = 50, search: string = ''): Promise<{ data: User[]; total: number; page: number; limit: number }> => {
-  try {
-    console.log('🔄 Fetching landlords:', { page, limit, search });
-    const response = await api.get(`/admin/landlords?page=${page}&limit=${limit}&search=${search}`);
-    console.log('✅ Landlords response:', response);
+    const response = await api.get(`/admin/landlords?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
     
     // Backend returns: { success: true, data: [...], total: number, page: number, limit: number }
     if (response.success && response.data) {
@@ -114,14 +111,6 @@ export const getAllLandlords = async (page: number = 1, limit: number = 50, sear
       page: response.page || page,
       limit: response.limit || limit,
     };
-  } catch (error: any) {
-    console.error('❌ Error fetching landlords:', error);
-    console.error('Error details:', {
-      message: error.message,
-      response: error.response,
-    });
-    return { data: [], total: 0, page, limit };
-  }
 };
 
 /**
@@ -138,4 +127,3 @@ export const getAllUsers = async (): Promise<User[]> => {
 };
 
 export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension };
-

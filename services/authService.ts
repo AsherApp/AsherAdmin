@@ -35,16 +35,11 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     // Backend ApiResponse.success() wraps data as: 
     // { success: true, message: "...", data: { data: { token, refreshToken, userDetails }, meta: {...} } }
     // So we need to access response.data.data for the actual data
-    console.log('Login response:', response); // Debug log
-    
     if (response.success && response.data) {
       // ApiResponse wraps the actual data in response.data.data
       const responseData = response.data.data || response.data;
       const token = responseData.token || responseData.accessToken;
       const user = responseData.userDetails || responseData.user;
-      
-      console.log('Parsed token:', token ? 'Found' : 'Missing'); // Debug log
-      console.log('Parsed user:', user ? 'Found' : 'Missing'); // Debug log
       
       if (token) {
         localStorage.setItem('admin_token', token);
@@ -55,8 +50,6 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
         if (user) {
           localStorage.setItem('admin_user', JSON.stringify(user));
         }
-        
-        console.log('Token saved to localStorage'); // Debug log
         
         return {
           success: true,
@@ -117,6 +110,12 @@ export const isAuthenticated = (): boolean => {
   return !!localStorage.getItem('admin_token');
 };
 
+export const isAdminUser = (): boolean => {
+  const user = getCurrentUser();
+  const roles = Array.isArray(user?.role) ? user.role : Array.isArray(user?.roles) ? user.roles : [user?.role].filter(Boolean);
+  return roles.includes('ADMIN');
+};
+
 /**
  * Invite landlord for AsherLandlordFE
  * This creates a user without password and sends invitation email
@@ -140,5 +139,4 @@ export const createUser = async (userData: CreateUserData): Promise<any> => {
   const response = await api.post('/auth/register', userData);
   return response;
 };
-
 

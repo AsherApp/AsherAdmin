@@ -20,6 +20,7 @@ export interface Email {
     profile?: {
       firstName?: string;
       lastName?: string;
+      fullname?: string;
     };
   };
   receiver?: {
@@ -28,6 +29,7 @@ export interface Email {
     profile?: {
       firstName?: string;
       lastName?: string;
+      fullname?: string;
     };
   };
 }
@@ -44,29 +46,9 @@ export interface CreateEmailData {
 /**
  * Get ALL emails in the system (admin view - see everything)
  */
-export const getAllEmails = async (page: number = 1, limit: number = 100, search: string = ''): Promise<{ data: Email[]; total: number }> => {
-  try {
-    console.log('🔄 Fetching emails:', { page, limit, search });
-    const response = await api.get(`/admin/emails?page=${page}&limit=${limit}&search=${search}`);
-    console.log('✅ Emails response:', response);
-    
-    // Backend returns: { success: true, data: [...], total: number }
-    if (response.success && response.data) {
-      return {
-        data: Array.isArray(response.data) ? response.data : [],
-        total: response.total || 0,
-      };
-    }
-    
-    // Fallback
-    return {
-      data: Array.isArray(response.data) ? response.data : [],
-      total: response.total || 0,
-    };
-  } catch (error: any) {
-    console.error('❌ Error fetching emails:', error);
-    return { data: [], total: 0 };
-  }
+export const getAllEmails = async (page = 1, limit = 100, search = ''): Promise<{ data: Email[]; total: number }> => {
+  const response = await api.get(`/admin/emails?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+  return { data: Array.isArray(response.data) ? response.data : [], total: response.total || response.pagination?.totalItems || 0 };
 };
 
 /**
@@ -74,9 +56,22 @@ export const getAllEmails = async (page: number = 1, limit: number = 100, search
  * This endpoint returns emails where the admin is the receiver
  */
 export const getInbox = async (page: number = 1, limit: number = 50, search: string = ''): Promise<{ data: Email[]; total: number }> => {
-  // Use admin endpoint to see ALL emails
-  return getAllEmails(page, limit, search);
+  return getEmailFolder('inbox', page, limit, search);
 };
+
+export const getEmailFolder = async (folder: 'inbox' | 'sent' | 'drafts' | 'trash' | 'starred', page = 1, limit = 100, search = ''): Promise<{ data: Email[]; total: number }> => {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit), search });
+  let endpoint = '/emails/user-mails/categorize';
+  if (folder === 'sent') endpoint = '/emails/user/sent';
+  if (folder === 'drafts') params.set('isDraft', 'true');
+  if (folder === 'trash') params.set('isThrash', 'true');
+  if (folder === 'starred') params.set('isStarred', 'true');
+  const response = await api.get(`${endpoint}?${params.toString()}`);
+  return { data: Array.isArray(response.data) ? response.data : [], total: response.pagination?.totalItems || response.data?.length || 0 };
+};
+
+export const updateEmailState = async (emailId: string, state: { isStarred?: boolean; isArchived?: boolean; isDeleted?: boolean }) => api.patch(`/emails/state/${emailId}`, state);
+export const recoverEmail = async (emailId: string) => api.patch(`/emails/recover/${emailId}`);
 
 /**
  * Get unread emails
@@ -146,7 +141,7 @@ export const replyToEmail = async (emailId: string, body: string, files?: File[]
     const response = await api.postFormData(`/emails/reply?emailId=${emailId}`, formData);
     return response.data || response;
   } else {
-    const response = await api.post('/emails/reply', { emailId, body });
+    const response = await api.post('/emails/reply', { originalEmailId: emailId, additionalMessage: body });
     return response.data || response;
   }
 };

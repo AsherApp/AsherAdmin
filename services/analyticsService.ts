@@ -20,14 +20,23 @@ export interface ActivityData {
   tickets: number;
 }
 
-export interface SystemHealth {
+export interface DeploymentHealth {
+  id: string;
   name: string;
-  type: string;
-  status: 'OPERATIONAL' | 'DEGRADED' | 'DOWN' | 'MAINTENANCE';
-  uptime: number;
-  activeUsers: number;
-  lastCheck: string;
-  version: string;
+  type: 'API' | 'Mobile App' | 'Desktop App' | 'Web App' | 'Website';
+  provider: 'Railway' | 'Vercel' | 'Expo / EAS' | 'Local' | 'Unknown';
+  status: 'OPERATIONAL' | 'DEGRADED' | 'DOWN' | 'NOT_CONFIGURED';
+  url: string | null;
+  latencyMs: number | null;
+  checkedAt: string;
+  detail: string;
+  version?: string;
+  processUptimeSeconds?: number;
+}
+
+export interface SystemHealth {
+  systems: DeploymentHealth[];
+  checkedAt: string;
 }
 
 /**
@@ -58,7 +67,7 @@ export const getActivityData = async (): Promise<ActivityData[]> => {
 };
 
 /**
- * Get system health for Rent Management System
+ * Get direct deployment health for the Asher suite.
  */
 export const getSystemHealth = async (): Promise<SystemHealth> => {
   const response = await api.get('/admin/system-health');

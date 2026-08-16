@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Email } from '../types';
-import { Inbox, Send, File, Trash2, Search, Star, Paperclip, MoreVertical, Reply, Forward, X, Pencil, Archive, Clock, AlertCircle, ArrowLeft, Maximize2, Minimize2, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link as LinkIcon, Image as ImageIcon, Wand2, RotateCcw, Loader } from 'lucide-react';
+import { Inbox, Send, File, Trash2, Search, Star, X, Pencil, AlertCircle, ArrowLeft, Minimize2, Bold, Italic, List, Wand2, RotateCcw, Loader } from 'lucide-react';
 import { generateEmailDraft } from '../services/geminiService';
-import { getInbox, getUnreadEmails, Email as ApiEmail, createEmail } from '../services/emailService';
+import { getEmailFolder, Email as ApiEmail, createEmail, markEmailAsRead, recoverEmail, updateEmailState } from '../services/emailService';
 import { getMessagingContacts, MessagingContact } from '../services/contactsService';
 
 const EmailSystem: React.FC = () => {
@@ -59,8 +59,9 @@ const EmailSystem: React.FC = () => {
   const loadEmails = async () => {
     try {
       setLoading(true);
-      if (activeFolder === 'inbox') {
-        const response = await getInbox(1, 1000, searchQuery); // Increased limit to see all emails
+      setSendError(null);
+      {
+        const response = await getEmailFolder(activeFolder, 1, 100, searchQuery);
         const mappedEmails: Email[] = response.data.map((e: ApiEmail) => {
           const senderName = e.sender?.profile?.fullname || 
                             (e.sender?.profile?.firstName && e.sender?.profile?.lastName
@@ -74,7 +75,7 @@ const EmailSystem: React.FC = () => {
 
           return {
             id: e.id,
-            folder: 'inbox',
+            folder: activeFolder === 'starred' ? 'inbox' : activeFolder,
             from: {
               name: senderName,
               email: e.senderEmail,
@@ -84,14 +85,14 @@ const EmailSystem: React.FC = () => {
             body: e.body,
             timestamp: new Date(e.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
             isRead: e.isReadByReceiver || false,
-            isStarred: false,
+            isStarred: Boolean((e as any).isStarred),
             hasAttachment: (e.attachment?.length || 0) > 0,
           };
         });
         setEmails(mappedEmails);
       }
-    } catch (error) {
-      console.error('Error loading emails:', error);
+    } catch (error: any) {
+      setSendError(error?.message || 'Mail could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -137,14 +138,15 @@ const EmailSystem: React.FC = () => {
     }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!subject) return;
-    const draftEmail: Email = {
-       id: Date.now().toString(), folder: 'drafts', from: { name: 'Me', email: 'admin@nexusprop.com' },
-       to: selectedRecipient ? [{ name: selectedRecipient.name, email: selectedRecipient.email }] : [], subject: subject, body: body, timestamp: 'Draft', isRead: true
-    };
-    setEmails([draftEmail, ...emails]);
-    setIsComposeOpen(false);
+    setIsSending(true); setSendError(null);
+    try {
+      await createEmail({ subject, body, receiverId: selectedRecipient?.userId, isDraft: true });
+      setIsComposeOpen(false); setSubject(''); setBody(''); setSelectedRecipient(null);
+      if (activeFolder === 'drafts') await loadEmails();
+    } catch (error: any) { setSendError(error?.message || 'Draft could not be saved.'); }
+    finally { setIsSending(false); }
   };
 
   const handleAiDraft = async () => {
@@ -156,30 +158,24 @@ const EmailSystem: React.FC = () => {
     setIsDrafting(false);
   };
 
-  const toggleStar = (e: React.MouseEvent, id: string) => {
+  const toggleStar = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setEmails(emails.map(email => email.id === id ? { ...email, isStarred: !email.isStarred } : email));
-    if (selectedEmail?.id === id) {
-      setSelectedEmail(prev => prev ? { ...prev, isStarred: !prev.isStarred } : null);
-    }
+    const existing = emails.find((email) => email.id === id);
+    if (!existing) return;
+    try { await updateEmailState(id, { isStarred: !existing.isStarred }); await loadEmails(); }
+    catch (error: any) { setSendError(error?.message || 'Message state could not be updated.'); }
   };
 
-  const deleteEmail = (e: React.MouseEvent | null, id: string) => {
+  const deleteEmail = async (e: React.MouseEvent | null, id: string) => {
     if (e) e.stopPropagation();
-    if (activeFolder === 'trash') {
-      // Permanent delete
-      setEmails(emails.filter(email => email.id !== id));
-      if (selectedEmail?.id === id) setSelectedEmail(null);
-    } else {
-      // Move to trash
-      setEmails(emails.map(email => email.id === id ? { ...email, folder: 'trash', isStarred: false } : email));
-      if (selectedEmail?.id === id) setSelectedEmail(null);
-    }
+    if (activeFolder === 'trash') return;
+    try { await updateEmailState(id, { isDeleted: true }); setSelectedEmail(null); await loadEmails(); }
+    catch (error: any) { setSendError(error?.message || 'Message could not be moved to trash.'); }
   };
 
-  const restoreEmail = (id: string) => {
-    setEmails(emails.map(email => email.id === id ? { ...email, folder: 'inbox' } : email));
-    if (selectedEmail?.id === id) setSelectedEmail(null);
+  const restoreEmail = async (id: string) => {
+    try { await recoverEmail(id); setSelectedEmail(null); await loadEmails(); }
+    catch (error: any) { setSendError(error?.message || 'Message could not be restored.'); }
   };
 
   const formatDoc = (cmd: string, value?: string) => {
@@ -201,7 +197,7 @@ const EmailSystem: React.FC = () => {
       className={`w-full flex items-center justify-between px-6 py-2.5 rounded-r-full text-sm font-bold transition-all ${activeFolder === id ? 'bg-red-100/50 text-red-700 border-l-4 border-red-600' : 'text-gray-600 hover:bg-white/40 border-l-4 border-transparent'}`}
     >
        <div className="flex items-center gap-4"><Icon size={18} />{label}</div>
-       {id === 'inbox' && <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">2</span>}
+       {id === 'inbox' && <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{emails.filter((email) => email.folder === 'inbox' && !email.isRead).length}</span>}
     </button>
   );
 
@@ -222,13 +218,11 @@ const EmailSystem: React.FC = () => {
 
       {/* List */}
       <div className="flex-1 glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/40 bg-white/40">
+         {sendError && <div className="bg-red-50 px-4 py-2 text-sm text-red-800">{sendError}</div>}
          <div className="h-16 border-b border-white/30 bg-white/30 backdrop-blur-md flex items-center px-4 gap-4">
             {selectedEmail && <button onClick={() => setSelectedEmail(null)} className="p-2 hover:bg-white/40 rounded-full text-gray-600"><ArrowLeft size={20} /></button>}
             <div className="flex-1 relative max-w-2xl">
                <Search className="absolute left-3 top-2.5 text-gray-500" size={18} /><input type="text" placeholder={`Search in ${activeFolder}...`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white/50 border border-white/50 rounded-xl pl-10 pr-4 py-2 text-sm outline-none font-medium focus:bg-white/80 transition-all" />
-            </div>
-            <div className="flex items-center gap-2">
-               <button className="p-2 hover:bg-white/40 rounded-full text-gray-500"><AlertCircle size={18}/></button>
             </div>
          </div>
 
@@ -243,13 +237,12 @@ const EmailSystem: React.FC = () => {
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 leading-snug">{selectedEmail.subject}</h2>
                     <div className="flex gap-2">
-                      <button onClick={(e) => toggleStar(e as any, selectedEmail.id)} className={`p-2 rounded-full hover:bg-white/50 transition ${selectedEmail.isStarred ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`}><Star size={20} /></button>
+                      <button onClick={(e) => void toggleStar(e as any, selectedEmail.id)} className={`p-2 rounded-full hover:bg-white/50 transition ${selectedEmail.isStarred ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`}><Star size={20} /></button>
                       {selectedEmail.folder === 'trash' ? (
-                         <button onClick={() => restoreEmail(selectedEmail.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-full" title="Restore"><RotateCcw size={20} /></button>
+                         <button onClick={() => void restoreEmail(selectedEmail.id)} className="p-2 text-green-600 hover:bg-green-50 rounded-full" title="Restore"><RotateCcw size={20} /></button>
                       ) : (
-                         <button onClick={(e) => deleteEmail(e as any, selectedEmail.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"><Trash2 size={20} /></button>
+                         <button onClick={(e) => void deleteEmail(e as any, selectedEmail.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"><Trash2 size={20} /></button>
                       )}
-                      <button className="p-2 text-gray-400 hover:bg-white/50 rounded-full"><MoreVertical size={20} /></button>
                     </div>
                   </div>
 
@@ -264,21 +257,14 @@ const EmailSystem: React.FC = () => {
                      </div>
                   </div>
                   
-                  <div className="prose prose-red max-w-none text-gray-800 font-medium text-sm leading-relaxed min-h-[200px]" dangerouslySetInnerHTML={{ __html: selectedEmail.body }}></div>
-                  
-                  {selectedEmail.folder !== 'drafts' && (
-                    <div className="mt-8 pt-6 border-t border-white/30 flex gap-3">
-                       <button className="px-6 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-600 hover:bg-white/60 flex items-center gap-2"><Reply size={18}/> Reply</button>
-                       <button className="px-6 py-2.5 border border-gray-300 rounded-xl text-sm font-bold text-gray-600 hover:bg-white/60 flex items-center gap-2"><Forward size={18}/> Forward</button>
-                    </div>
-                  )}
+                  <div className="whitespace-pre-wrap text-gray-800 font-medium text-sm leading-relaxed min-h-[200px]">{selectedEmail.body.replace(/<[^>]*>/g, '')}</div>
                </div>
             ) : (
                filteredEmails.length > 0 ? (
                  filteredEmails.map(email => (
-                    <div key={email.id} onClick={() => setSelectedEmail(email)} className="group flex items-center px-4 py-3.5 border-b border-white/30 hover:bg-white/60 cursor-pointer transition-colors">
+                    <div key={email.id} onClick={() => { setSelectedEmail(email); if (!email.isRead && email.folder === 'inbox') void markEmailAsRead(email.id).then(loadEmails).catch((e) => setSendError(e?.message || 'Message could not be marked as read.')); }} className="group flex items-center px-4 py-3.5 border-b border-white/30 hover:bg-white/60 cursor-pointer transition-colors">
                        <div className="flex items-center gap-3 mr-3 pl-2">
-                          <button onClick={(e) => toggleStar(e, email.id)} className={`hover:scale-110 transition-transform ${email.isStarred ? 'text-amber-400 fill-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
+                          <button onClick={(e) => void toggleStar(e, email.id)} className={`hover:scale-110 transition-transform ${email.isStarred ? 'text-amber-400 fill-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
                              <Star size={18} />
                           </button>
                        </div>
@@ -297,11 +283,10 @@ const EmailSystem: React.FC = () => {
                        {/* Hover Actions */}
                        <div className="w-32 flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {activeFolder === 'trash' ? (
-                             <button onClick={(e) => {e.stopPropagation(); restoreEmail(email.id)}} className="p-1.5 text-green-600 hover:bg-green-100 rounded" title="Restore"><RotateCcw size={16}/></button>
+                             <button onClick={(e) => {e.stopPropagation(); void restoreEmail(email.id)}} className="p-1.5 text-green-600 hover:bg-green-100 rounded" title="Restore"><RotateCcw size={16}/></button>
                           ) : (
-                             <button onClick={(e) => deleteEmail(e, email.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 size={16}/></button>
+                             <button onClick={(e) => void deleteEmail(e, email.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Move to trash"><Trash2 size={16}/></button>
                           )}
-                          <button className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-white rounded"><Archive size={16}/></button>
                        </div>
                        <div className="w-20 text-right text-xs font-bold text-gray-500 group-hover:hidden">{email.timestamp}</div>
                     </div>
@@ -388,7 +373,7 @@ const EmailSystem: React.FC = () => {
                      <div className="flex flex-col gap-2">
                        <div className="flex gap-2">
                        <button onClick={handleSend} disabled={!selectedRecipient || !subject || !body || isSending} className="bg-red-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg hover:bg-red-700 flex items-center gap-2 disabled:opacity-50">{isSending ? 'Sending...' : 'Send Message'} <Send size={18} /></button>
-                       <button onClick={handleSaveDraft} className="bg-white/50 text-gray-700 px-4 py-3 rounded-xl text-sm font-bold hover:bg-white/80">Save Draft</button>
+                       <button onClick={() => void handleSaveDraft()} disabled={isSending || !subject} className="bg-white/50 text-gray-700 px-4 py-3 rounded-xl text-sm font-bold hover:bg-white/80 disabled:opacity-50">Save Draft</button>
                        </div>
                        {sendError && <p className="text-sm font-medium text-red-600">{sendError}</p>}
                      </div>

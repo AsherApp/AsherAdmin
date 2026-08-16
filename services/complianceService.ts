@@ -34,11 +34,9 @@ export type ComplianceOverviewResponse = {
 };
 
 export async function getComplianceOverview(): Promise<ComplianceOverviewResponse> {
-  const response = await api.get<{ success: boolean; data: ComplianceOverviewResponse }>(
-    '/admin/compliance/overview'
-  );
+  const response = await api.get('/admin/compliance/overview') as { success: boolean; data: ComplianceOverviewResponse };
   if (response.success && response.data) {
     return response.data;
   }
-  return (response as { data?: ComplianceOverviewResponse }).data ?? (response as ComplianceOverviewResponse);
+  return response.data;
 }

@@ -22,7 +22,6 @@ export const getSystemDetails = (id: string) => {
 
 export const getPriorityColor = (p: TicketPriority) => {
   switch(p) {
-    case TicketPriority.CRITICAL: return 'bg-red-100 text-red-700 border-red-200';
     case TicketPriority.HIGH: return 'bg-orange-100 text-orange-700 border-orange-200';
     case TicketPriority.MEDIUM: return 'bg-blue-100 text-blue-700 border-blue-200';
     case TicketPriority.LOW: return 'bg-gray-100 text-gray-600 border-gray-200';

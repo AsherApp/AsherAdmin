@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Ticket, TicketPriority, TicketStatus } from '../types';
-import { Search, Server, ChevronDown, CheckCircle2, LayoutList, KanbanSquare, Plus, X, ArrowRight, Loader } from 'lucide-react';
-import { getSystemDetails } from '../utils/uiHelpers';
+import { Search, CheckCircle2, LayoutList, KanbanSquare, Plus, X, ArrowRight, Loader } from 'lucide-react';
 import TicketTable from './tickets/TicketTable';
 import TicketKanban from './tickets/TicketKanban';
 import TicketDetailModal from './tickets/TicketDetailModal';
@@ -19,14 +18,14 @@ const TicketSystem: React.FC = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterSystem, setFilterSystem] = useState('4'); // Default to Rent Mgmt System
   const [filterStatus, setFilterStatus] = useState('all');
+  const [error, setError] = useState('');
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
 
   // Create Ticket State
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
-  const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: TicketPriority.MEDIUM, systemId: '4', user: 'Guest User' });
+  const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: TicketPriority.MEDIUM });
 
   useEffect(() => {
     loadTickets();
@@ -38,14 +37,8 @@ const TicketSystem: React.FC = () => {
   const loadTickets = async () => {
     try {
       setLoading(true);
-      console.log('🔄 TicketSystem: Loading tickets...');
+      setError('');
       const response = await getAllTickets(1, 100, searchQuery);
-      console.log('📥 TicketSystem: Received response:', { 
-        dataCount: response.data?.length || 0, 
-        total: response.total,
-        dataType: Array.isArray(response.data) ? 'array' : typeof response.data
-      });
-      
       if (!response.data || !Array.isArray(response.data)) {
         console.error('❌ TicketSystem: Invalid response data:', response);
         setTickets([]);
@@ -54,19 +47,16 @@ const TicketSystem: React.FC = () => {
       
       const mappedTickets = response.data.map((t) => mapApiTicketToUiTicket(t, '4'));
       setTickets(mappedTickets);
-    } catch (error) {
-      console.error('❌ TicketSystem: Error loading tickets:', error);
-      console.error('❌ TicketSystem: Error details:', error);
-      setTickets([]);
+    } catch (error: any) {
+      setError(error?.message || 'Tickets could not be loaded.');
     } finally {
       setLoading(false);
     }
   };
 
   const filteredTickets = tickets.filter(t => {
-    const matchesSystem = filterSystem === 'all' || t.sourceSystemId === filterSystem;
     const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
-    return matchesSystem && matchesStatus;
+    return matchesStatus;
   });
 
   const stats = useMemo(() => {
@@ -74,7 +64,6 @@ const TicketSystem: React.FC = () => {
       total: tickets.length,
       open: tickets.filter(t => t.status === TicketStatus.OPEN).length,
       critical: tickets.filter(t => t.priority === TicketPriority.HIGH && t.status !== TicketStatus.RESOLVED && t.status !== TicketStatus.CLOSED).length,
-      avgTime: '4h 12m'
     };
   }, [tickets]);
 
@@ -107,7 +96,7 @@ const TicketSystem: React.FC = () => {
       // Refresh tickets after creation
       await loadTickets();
       setIsCreating(false);
-      setNewTicket({ subject: '', description: '', priority: TicketPriority.MEDIUM, systemId: '4', user: 'Guest User' });
+      setNewTicket({ subject: '', description: '', priority: TicketPriority.MEDIUM });
     } catch (error) {
       console.error('Error creating ticket:', error);
     } finally {
@@ -120,7 +109,7 @@ const TicketSystem: React.FC = () => {
       <div className="flex flex-col lg:flex-row justify-between items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Support Operations</h2>
-          <p className="text-gray-600 text-sm mt-1 font-medium">Issue tracking for Rent Management System (FE).</p>
+          <p className="text-gray-600 text-sm mt-1 font-medium">Support and dispute tracking across the Asher suite.</p>
         </div>
         <div className="flex gap-4 items-center">
           {loading ? (
@@ -148,6 +137,8 @@ const TicketSystem: React.FC = () => {
         </div>
       </div>
 
+      {error && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error} <button onClick={() => void loadTickets()} className="ml-2 font-bold underline">Try again</button></div>}
+
       <div className="glass-panel p-4 rounded-3xl flex flex-wrap items-center gap-4 border border-white/40 bg-white/40 backdrop-blur-md">
          <div className="flex-1 min-w-[240px] relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
@@ -159,31 +150,8 @@ const TicketSystem: React.FC = () => {
          </div>
          
          <div className="flex items-center gap-3 overflow-x-auto pb-1 md:pb-0">
-            <div className="relative group">
-               <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition border ${filterSystem !== 'all' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white/50 text-gray-600 border-white/50 hover:bg-white'}`}>
-                  <Server size={16} /> {filterSystem === 'all' ? 'System: All' : getSystemDetails(filterSystem).name} <ChevronDown size={14} className="opacity-50" />
-               </button>
-               <div className="absolute top-full left-0 mt-2 w-48 glass-panel rounded-xl hidden group-hover:block z-20 p-1 shadow-xl">
-                  <button onClick={() => setFilterSystem('all')} className="w-full text-left px-3 py-2 hover:bg-red-50 rounded-lg text-xs font-bold text-gray-700">All Systems</button>
-                  {['1','2','3','4','5'].map(id => (
-                     <button key={id} onClick={() => setFilterSystem(id)} className="w-full text-left px-3 py-2 hover:bg-red-50 rounded-lg text-xs font-medium text-gray-700 flex items-center gap-2">
-                        {React.createElement(getSystemDetails(id).icon, { size: 12 })} {getSystemDetails(id).name}
-                     </button>
-                  ))}
-               </div>
-            </div>
             {viewMode === 'table' && (
-               <div className="relative group">
-                  <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition border ${filterStatus !== 'all' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white/50 text-gray-600 border-white/50 hover:bg-white'}`}>
-                     <CheckCircle2 size={16} /> {filterStatus === 'all' ? 'Status: Any' : filterStatus} <ChevronDown size={14} className="opacity-50" />
-                  </button>
-                  <div className="absolute top-full left-0 mt-2 w-40 glass-panel rounded-xl hidden group-hover:block z-20 p-1 shadow-xl">
-                     <button onClick={() => setFilterStatus('all')} className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg text-xs font-bold text-gray-700">Any Status</button>
-                     {Object.values(TicketStatus).map(s => (
-                        <button key={s} onClick={() => setFilterStatus(s)} className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg text-xs font-medium text-gray-700">{s}</button>
-                     ))}
-                  </div>
-               </div>
+               <label className="relative flex items-center gap-2 rounded-xl bg-white/50 px-3 border border-white/50"><CheckCircle2 size={16}/><span className="sr-only">Filter by status</span><select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-transparent py-2.5 text-sm font-bold outline-none"><option value="all">Any status</option>{Object.values(TicketStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></label>
             )}
             <div className="flex bg-white/50 p-1 rounded-xl border border-white/50">
                <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg transition ${viewMode === 'table' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="Table View"><LayoutList size={18}/></button>
@@ -240,19 +208,7 @@ const TicketSystem: React.FC = () => {
                       placeholder="Detailed explanation..." 
                     />
                  </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">System</label>
-                       <select 
-                          value={newTicket.systemId} 
-                          onChange={(e) => setNewTicket({...newTicket, systemId: e.target.value})}
-                          className="glass-input w-full p-3 rounded-xl text-sm font-medium appearance-none bg-white/30 cursor-pointer"
-                       >
-                          {['1','2','3','4','5'].map(id => (
-                             <option key={id} value={id}>{getSystemDetails(id).name}</option>
-                          ))}
-                       </select>
-                    </div>
+                 <div>
                     <div>
                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Priority</label>
                        <select 
@@ -263,15 +219,6 @@ const TicketSystem: React.FC = () => {
                           {Object.values(TicketPriority).map(p => <option key={p} value={p}>{p}</option>)}
                        </select>
                     </div>
-                 </div>
-                 <div>
-                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Reporter</label>
-                     <input 
-                        type="text" 
-                        value={newTicket.user}
-                        onChange={(e) => setNewTicket({...newTicket, user: e.target.value})}
-                        className="glass-input w-full p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm font-medium bg-white/30 placeholder-gray-400" 
-                     />
                  </div>
               </div>
 

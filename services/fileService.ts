@@ -129,6 +129,11 @@ export const getDocuments = async (): Promise<Document[]> => {
   return [];
 };
 
+export const updateDocumentStatus = async (documentId: string, isPublished: boolean): Promise<Document> => {
+  const response = await api.patch(`/admin/documents/${documentId}/status`, { isPublished });
+  return response.data || response;
+};
+
 /**
  * Upload property document
  * Backend endpoint: POST /api/file-uploads (general upload)

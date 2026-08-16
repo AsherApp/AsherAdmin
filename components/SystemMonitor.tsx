@@ -1,217 +1,93 @@
-import React, { useEffect, useState } from 'react';
-import { MonitoredSystem, SystemStatus } from '../types';
-import { Server, Smartphone, Globe } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
-import { getSystemHealth, getActivityData } from '../services/analyticsService';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Activity, AlertCircle, CheckCircle2, Clock3, ExternalLink, Globe2, Loader, RefreshCw, Server, Smartphone } from 'lucide-react';
+import { DeploymentHealth, getSystemHealth } from '../services/analyticsService';
+
+const statusStyles: Record<DeploymentHealth['status'], string> = {
+  OPERATIONAL: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  DEGRADED: 'bg-amber-50 text-amber-700 border-amber-200',
+  DOWN: 'bg-red-50 text-red-700 border-red-200',
+  NOT_CONFIGURED: 'bg-gray-100 text-gray-600 border-gray-200',
+};
+
+const iconFor = (type: DeploymentHealth['type']) => type === 'Mobile App' ? Smartphone : type === 'Website' ? Globe2 : Server;
+
+const formatDuration = (seconds?: number) => {
+  if (seconds == null) return null;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m process uptime`;
+};
 
 const SystemMonitor: React.FC = () => {
-  const [activityData, setActivityData] = useState<any[]>([]);
+  const [systems, setSystems] = useState<DeploymentHealth[]>([]);
+  const [checkedAt, setCheckedAt] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Only Rent Mgmt System (id: '4') is wired to live health data today (see
-  // getSystemHealth() below). The other apps are real products but have no
-  // health-check/analytics endpoint yet — show them as not-yet-monitored
-  // rather than inventing uptime/user numbers for them.
-  const [systems, setSystems] = useState<MonitoredSystem[]>([
-    { id: '1', name: 'Tenant Portal Mobile', type: 'Mobile App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
-    { id: '2', name: 'Vendor Mobile App', type: 'Mobile App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
-    { id: '3', name: 'Listing Website', type: 'Website', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
-    { id: '4', name: 'Rent Mgmt System', type: 'Web App', status: SystemStatus.OPERATIONAL, uptime: 0, activeUsers: 0, lastCheck: 'Loading...', version: 'v3.1.0' }, // Replaced with real data below
-    { id: '5', name: 'Admin Dashboard', type: 'Web App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
-  ]);
-
-  useEffect(() => {
-    loadSystemHealth();
-    loadActivityData();
-    // Refresh every 30 seconds
-    const interval = setInterval(() => {
-      loadSystemHealth();
-      loadActivityData();
-    }, 30000);
-    return () => clearInterval(interval);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const health = await getSystemHealth();
+      setSystems(health.systems || []);
+      setCheckedAt(health.checkedAt);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Deployment checks could not be completed.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadSystemHealth = async () => {
-    try {
-      console.log('🔄 Loading Rent Management System health...');
-      const health = await getSystemHealth();
-      console.log('✅ System health loaded:', health);
+  useEffect(() => {
+    void load();
+    const interval = window.setInterval(() => void load(), 60_000);
+    return () => window.clearInterval(interval);
+  }, [load]);
 
-      // Update Rent Mgmt System in systems array with real data
-      setSystems(prevSystems => {
-        return prevSystems.map(sys => {
-          if (sys.id === '4') {
-            // Map backend status to SystemStatus enum
-            let status = SystemStatus.OPERATIONAL;
-            if (health.status === 'OPERATIONAL') {
-              status = SystemStatus.OPERATIONAL;
-            } else if (health.status === 'DEGRADED') {
-              status = SystemStatus.DEGRADED;
-            } else if (health.status === 'DOWN') {
-              status = SystemStatus.DOWN;
-            } else if (health.status === 'MAINTENANCE') {
-              status = SystemStatus.MAINTENANCE;
-            }
-            
-            return {
-              ...sys,
-              name: health.name || 'Rent Mgmt System',
-              type: health.type || 'Web App',
-              status: status,
-              uptime: Math.round(health.uptime || 0),
-              activeUsers: health.activeUsers || 0,
-              lastCheck: health.lastCheck || 'Just now',
-              version: health.version || 'v3.1.0',
-            };
-          }
-          return sys;
-        });
-      });
-    } catch (error: any) {
-      console.error('❌ Error loading system health:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response,
-      });
-      // Keep existing data on error, don't reset to mock
-    }
-  };
-
-  const loadActivityData = async () => {
-    try {
-      console.log('🔄 Loading activity data...');
-      const response = await getActivityData();
-      console.log('✅ Activity data loaded:', response);
-      
-      // Handle both direct array and wrapped response
-      const activity = Array.isArray(response) ? response : [];
-      
-      // Transform activity data for chart (last 7 days)
-      // Calculate total activity per day (users + tickets)
-      const chartData = activity.map((item: any) => ({
-        time: item.name || 'Day', // Day name (e.g., "Mon", "Tue")
-        load: (item.users || 0) + (item.tickets || 0), // Total activity
-        users: item.users || 0,
-        tickets: item.tickets || 0,
-      }));
-      setActivityData(chartData);
-    } catch (error: any) {
-      console.error('❌ Error loading activity data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response,
-      });
-      // Fallback to empty array if error
-      setActivityData([]);
-    }
-  };
-
-  const getStatusColor = (status: SystemStatus) => {
-    switch (status) {
-      case SystemStatus.OPERATIONAL: return 'bg-green-500 shadow-[0_0_15px_rgba(16,185,129,0.6)]';
-      case SystemStatus.DEGRADED: return 'bg-yellow-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]';
-      case SystemStatus.MAINTENANCE: return 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]';
-      case SystemStatus.DOWN: return 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]';
-      case SystemStatus.NOT_MONITORED: return 'bg-gray-400';
-      default: return 'bg-gray-400';
-    }
-  };
-
-  const getIcon = (type: string) => {
-    if (type === 'Mobile App') return <Smartphone size={20} />;
-    if (type === 'Website') return <Globe size={20} />;
-    return <Server size={20} />;
-  };
+  const operational = systems.filter((system) => system.status === 'OPERATIONAL').length;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">System Live Monitor</h2>
-          <p className="text-gray-600 text-sm font-medium">Real-time health check of the 5-system ecosystem.</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-red-600">Live deployment checks</p>
+          <h2 className="mt-1 text-3xl font-bold tracking-tight text-gray-900">System health</h2>
+          <p className="mt-1 text-sm font-medium text-gray-600">Direct checks against configured Railway, Vercel and app health URLs. No synthetic uptime percentage.</p>
         </div>
-        <button className="bg-white/60 backdrop-blur-md border border-red-200 text-red-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-50 hover:shadow-lg transition-all">
-          Run Diagnostics
+        <button onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-red-700 disabled:opacity-60">
+          {loading ? <Loader size={17} className="animate-spin" /> : <RefreshCw size={17} />} Run diagnostics
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {systems.map((sys) => (
-          <div key={sys.id} className="glass-panel rounded-3xl p-6 relative overflow-hidden group transition-all hover:-translate-y-1 hover:shadow-2xl">
-            {/* Gradient Glow Background */}
-            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full opacity-20 blur-3xl group-hover:opacity-40 transition-opacity ${sys.status === SystemStatus.OPERATIONAL ? 'bg-green-500' : sys.status === SystemStatus.DEGRADED ? 'bg-yellow-500' : sys.status === SystemStatus.NOT_MONITORED ? 'bg-gray-400' : 'bg-blue-500'}`}></div>
+      {error && <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><AlertCircle className="mt-0.5 shrink-0" size={18} /><div><p className="font-bold">Health data unavailable</p><p>{error}</p></div></div>}
 
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white/60 backdrop-blur-md rounded-2xl text-red-600 shadow-sm border border-white/50">
-                  {getIcon(sys.type)}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-lg">{sys.name}</h3>
-                  <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{sys.type}</span>
-                </div>
-              </div>
-              <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 backdrop-blur-sm border ${
-                sys.status === SystemStatus.OPERATIONAL ? 'bg-green-100/60 text-green-700 border-green-200' :
-                sys.status === SystemStatus.DEGRADED ? 'bg-yellow-100/60 text-yellow-700 border-yellow-200' :
-                sys.status === SystemStatus.NOT_MONITORED ? 'bg-gray-100/60 text-gray-500 border-gray-200' :
-                'bg-blue-100/60 text-blue-700 border-blue-200'
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${getStatusColor(sys.status)} ${sys.status !== SystemStatus.NOT_MONITORED ? 'animate-pulse' : ''}`}></span>
-                {sys.status}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-              <div className="bg-white/30 rounded-xl p-3 border border-white/40">
-                <p className="text-xs text-gray-500 font-medium mb-1">Uptime</p>
-                <p className="text-xl font-bold text-gray-800">{sys.uptime === null ? '—' : `${sys.uptime}%`}</p>
-              </div>
-              <div className="bg-white/30 rounded-xl p-3 border border-white/40">
-                <p className="text-xs text-gray-500 font-medium mb-1">Active Users</p>
-                <p className="text-xl font-bold text-gray-800">{sys.activeUsers === null ? '—' : sys.activeUsers.toLocaleString()}</p>
-              </div>
-            </div>
-
-            <div className="h-20 w-full opacity-80 relative z-10 -ml-2">
-              <ResponsiveContainer width="105%" height="100%">
-                <AreaChart data={
-                  // Only the Rent Mgmt System (id: '4') has a real activity
-                  // feed; every other system shows an empty chart until it's
-                  // actually integrated with live monitoring.
-                  sys.id === '4' ? activityData : []
-                }>
-                   <defs>
-                    <linearGradient id={`grad-${sys.id}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="load" 
-                    stroke="#DC2626" 
-                    fill={`url(#grad-${sys.id})`} 
-                    strokeWidth={3} 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200/50 flex justify-between items-center text-xs text-gray-500 font-medium relative z-10">
-               <span className="bg-white/40 px-2 py-1 rounded-lg">Version: {sys.version}</span>
-               <span>Last check: {sys.lastCheck}</span>
-            </div>
-          </div>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Operational now</p><p className="mt-1 text-3xl font-bold text-gray-900">{operational} / {systems.length}</p></div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Need configuration</p><p className="mt-1 text-3xl font-bold text-gray-900">{systems.filter((s) => s.status === 'NOT_CONFIGURED').length}</p></div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Last diagnostic</p><p className="mt-2 text-sm font-bold text-gray-900">{checkedAt ? new Date(checkedAt).toLocaleString() : 'Not completed'}</p></div>
       </div>
+
+      {loading && systems.length === 0 ? (
+        <div className="flex h-64 items-center justify-center rounded-3xl border border-gray-200 bg-white text-gray-500"><Loader className="mr-2 animate-spin" /> Checking live deployments…</div>
+      ) : (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-3">
+          {systems.map((system) => {
+            const Icon = iconFor(system.type);
+            const duration = formatDuration(system.processUptimeSeconds);
+            return (
+              <article key={system.id} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3"><span className="rounded-2xl bg-red-50 p-3 text-red-600"><Icon size={20} /></span><div className="min-w-0"><h3 className="truncate font-bold text-gray-900">{system.name}</h3><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{system.type} · {system.provider}</p></div></div>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusStyles[system.status]}`}>{system.status.replace('_', ' ')}</span>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Response</p><p className="mt-1 font-bold text-gray-900">{system.latencyMs == null ? '—' : `${system.latencyMs} ms`}</p></div><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Checked</p><p className="mt-1 font-bold text-gray-900">{new Date(system.checkedAt).toLocaleTimeString()}</p></div></div>
+                <p className="mt-4 min-h-10 text-sm leading-5 text-gray-600">{system.detail}</p>
+                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 text-xs text-gray-500"><span className="inline-flex items-center gap-1">{system.status === 'OPERATIONAL' ? <CheckCircle2 size={14} className="text-emerald-600" /> : <Activity size={14} />} {duration || system.version || 'Current reachability only'}</span>{system.url && <a href={system.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-bold text-red-600 hover:text-red-700">Open <ExternalLink size={13} /></a>}</div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800"><Clock3 className="mt-0.5 shrink-0" size={18} /><p>Historical provider uptime and deployment history require Railway/Vercel API credentials. Until configured, this page reports verified current reachability only.</p></div>
     </div>
   );
 };

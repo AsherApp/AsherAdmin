@@ -33,10 +33,7 @@ export interface NotificationResponse {
  * Backend endpoint: GET /api/notification/me
  */
 export const getAllNotifications = async (): Promise<NotificationResponse> => {
-  try {
-    console.log('🔄 Fetching notifications...');
     const response = await api.get('/notification/me');
-    console.log('✅ Notifications response:', response);
     
     // Backend returns notifications array directly or wrapped
     if (response.notifications) {
@@ -63,14 +60,6 @@ export const getAllNotifications = async (): Promise<NotificationResponse> => {
       total: 0,
       unreadCount: 0,
     };
-  } catch (error: any) {
-    console.error('❌ Error fetching notifications:', error);
-    return {
-      notifications: [],
-      total: 0,
-      unreadCount: 0,
-    };
-  }
 };
 
 /**

@@ -29,6 +29,22 @@ interface SidebarProps {
   setIsCollapsed: (collapsed: boolean) => void;
 }
 
+export const ADMIN_MENU_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'systems', label: 'System Monitor', icon: Activity },
+  { id: 'landlords', label: 'Landlords', icon: Users },
+  { id: 'vendors', label: 'Vendors', icon: Wrench },
+  { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
+  { id: 'finance', label: 'Platform Finance', icon: Wallet },
+  { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
+  { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
+  { id: 'tickets', label: 'Support Tickets', icon: Ticket },
+  { id: 'email', label: 'Admin Mail', icon: Mail },
+  { id: 'inbox', label: 'Admin Chat', icon: MessageSquare },
+  { id: 'files', label: 'Asher Library', icon: FolderOpen },
+  { id: 'support-content', label: 'Support Content', icon: HelpCircle },
+];
+
 const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
 
@@ -36,22 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
     logout();
     navigate('/login');
   };
-
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'systems', label: 'System Monitor', icon: Activity },
-    { id: 'landlords', label: 'Landlords', icon: Users },
-    { id: 'vendors', label: 'Vendors', icon: Wrench },
-    { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
-    { id: 'finance', label: 'Platform Finance', icon: Wallet },
-    { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
-    { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
-    { id: 'tickets', label: 'Support Tickets', icon: Ticket },
-    { id: 'email', label: 'Internal Mail', icon: Mail },
-    { id: 'inbox', label: 'Live Chat', icon: MessageSquare },
-    { id: 'files', label: 'Asher Library', icon: FolderOpen },
-    { id: 'support-content', label: 'Support Content', icon: HelpCircle },
-  ];
 
   return (
     <div className={`${isCollapsed ? 'w-20' : 'w-64'} h-screen border-r border-white/40 flex flex-col shadow-2xl fixed left-0 top-0 z-20 hidden md:flex bg-white/60 backdrop-blur-xl transition-all duration-300 ease-in-out`}>
@@ -73,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
 
       {/* Navigation */}
       <nav className="flex-1 py-8 px-3 space-y-2 overflow-y-auto custom-scrollbar overflow-x-hidden">
-        {menuItems.map((item) => {
+        {ADMIN_MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = currentTab === item.id;
           return (

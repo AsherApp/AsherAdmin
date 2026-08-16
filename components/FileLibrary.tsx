@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { generateDocumentTemplate } from '../services/geminiService';
 import { getSystemDetails } from '../utils/uiHelpers';
-import { getDocuments, uploadDocument, Document } from '../services/fileService';
+import { getDocuments, uploadDocument, updateDocumentStatus, Document } from '../services/fileService';
 
 const FileLibrary: React.FC = () => {
   const [files, setFiles] = useState<FileAsset[]>([]);
@@ -17,6 +17,7 @@ const FileLibrary: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSystem, setFilterSystem] = useState('4'); // Default to Rent Mgmt System
+  const [loadError, setLoadError] = useState('');
   
   // Creator State
   const [docTitle, setDocTitle] = useState('');
@@ -37,6 +38,7 @@ const FileLibrary: React.FC = () => {
   const loadFiles = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const documents = await getDocuments();
       const mappedFiles: FileAsset[] = documents.map((doc: Document) => {
         const categoryMatch = doc.documentName.match(/^\[(Template|Guide|Legal|FAQ|Book|News|Tutorial|Handbook|HowTo)\]/i);
@@ -46,15 +48,15 @@ const FileLibrary: React.FC = () => {
         size: doc.size || '0 KB',
         type: doc.type?.split('/')[1]?.toUpperCase() || 'FILE',
         uploadedAt: new Date(doc.createdAt).toISOString().split('T')[0],
-        category: categoryMatch?.[1] || doc.docType || 'Template',
+        category: (categoryMatch?.[1] || doc.docType || 'Template') as FileAsset['category'],
         systemId: (doc as Document & { systemId?: string }).systemId || '4',
         status: (doc as Document & { isPublished?: boolean }).isPublished === false ? 'Draft' : 'Published',
         url: doc.documentUrl?.[0] || '',
       };
       });
       setFiles(mappedFiles);
-    } catch (error) {
-      console.error('Error loading files:', error);
+    } catch (error: any) {
+      setLoadError(error?.message || 'Documents could not be loaded.');
     } finally {
       setLoading(false);
     }
@@ -304,7 +306,7 @@ const FileLibrary: React.FC = () => {
 
            <div className="flex-1 bg-gray-100/50 relative overflow-y-auto custom-scrollbar flex justify-center p-8" onClick={() => !previewMode && editorRef.current?.focus()}>
               {previewMode ? (
-                 <div className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm p-[20mm] prose prose-red max-w-none animate-in fade-in" dangerouslySetInnerHTML={{__html: docContent}} />
+                 <iframe title="Document preview" sandbox="" srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Inter,Arial,sans-serif;line-height:1.55;color:#1f2937;margin:20mm}img{max-width:100%}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:8px}</style></head><body>${docContent}</body></html>`} className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm animate-in fade-in" />
               ) : (
                  <div 
                     ref={editorRef} 
@@ -395,6 +397,7 @@ const FileLibrary: React.FC = () => {
          </div>
 
          {/* File List */}
+         {loadError && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{loadError} <button onClick={() => void loadFiles()} className="font-bold underline">Try again</button></div>}
          <div className="flex-1 glass-panel rounded-3xl overflow-hidden flex flex-col border border-white/40 shadow-xl">
             <div className="p-4 border-b border-white/40 bg-white/20 flex justify-between items-center backdrop-blur-md">
                <h4 className="font-bold text-gray-700 ml-2 flex items-center gap-2"><Server size={18}/> System Assets</h4>
@@ -412,6 +415,7 @@ const FileLibrary: React.FC = () => {
                            <th className="p-4 pl-6">File Name</th>
                            <th className="p-4">Category</th>
                            <th className="p-4">System</th>
+                           <th className="p-4">Status</th>
                            <th className="p-4 text-right">Actions</th>
                         </tr>
                      </thead>
@@ -440,8 +444,10 @@ const FileLibrary: React.FC = () => {
                                        {sysDetails.name}
                                     </div>
                                  </td>
+                                 <td className="p-4"><span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${file.status === 'Published' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{file.status}</span></td>
                                  <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                       <button onClick={() => void updateDocumentStatus(file.id, file.status !== 'Published').then(loadFiles).catch((e) => setLoadError(e?.message || 'Publish status could not be updated.'))} className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-red-600 hover:bg-white rounded-xl transition">{file.status === 'Published' ? 'Unpublish' : 'Publish'}</button>
                                        <button
                                           onClick={() => file.url && window.open(file.url, '_blank', 'noopener,noreferrer')}
                                           disabled={!file.url}

@@ -2,10 +2,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Ticket, TicketPriority, TicketStatus, TicketMessage, TicketHistory } from '../../types';
 import { analyzeTicketWithAI } from '../../services/geminiService';
-import { addMessageToTicket, getTicketById } from '../../services/ticketService';
+import { addMessageToTicket, getTicketById, mapApiTicketToUiTicket, updateTicket, updateTicketStatus } from '../../services/ticketService';
 import { 
-  MoreVertical, X, Wand2, History, Paperclip, Send, Tag, ArrowUpRight, ChevronDown, Clock,
-  FileText, List, Bold, Italic, Underline, Link as LinkIcon, ListOrdered, Image as ImageIcon
+  X, Wand2, History, Send, ChevronDown, Clock,
+  FileText, List, Bold, Italic, Underline, Link as LinkIcon, ListOrdered
 } from 'lucide-react';
 import { getSystemDetails, getPriorityColor } from '../../utils/uiHelpers';
 
@@ -22,13 +22,23 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
   const [replyText, setReplyText] = useState('');
   const [currentTicket, setCurrentTicket] = useState<Ticket>(ticket);
   const [isLoadingTicket, setIsLoadingTicket] = useState(false);
+  const [actionError, setActionError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const replyEditorRef = useRef<HTMLDivElement>(null);
 
   // Update currentTicket when ticket prop changes
   useEffect(() => {
     setCurrentTicket(ticket);
-  }, [ticket]);
+    setIsLoadingTicket(true);
+    getTicketById(ticket.id)
+      .then((live) => {
+        const mapped = mapApiTicketToUiTicket(live, ticket.sourceSystemId);
+        setCurrentTicket(mapped);
+        onUpdate(mapped);
+      })
+      .catch((error) => setActionError(error?.message || 'Ticket details could not be refreshed.'))
+      .finally(() => setIsLoadingTicket(false));
+  }, [ticket.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -40,16 +50,22 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
     }
   }, [currentTicket.messages, activeTab]);
 
-  const handleStatusChange = (newStatus: TicketStatus) => {
-    const updated = { ...currentTicket, status: newStatus };
-    setCurrentTicket(updated);
-    onUpdate(updated);
+  const handleStatusChange = async (newStatus: TicketStatus) => {
+    setActionError('');
+    try {
+      await updateTicketStatus(currentTicket.id, newStatus);
+      const updated = { ...currentTicket, status: newStatus };
+      setCurrentTicket(updated); onUpdate(updated);
+    } catch (error: any) { setActionError(error?.message || 'Status could not be updated.'); }
   };
 
-  const handlePriorityChange = (newPriority: TicketPriority) => {
-    const updated = { ...currentTicket, priority: newPriority };
-    setCurrentTicket(updated);
-    onUpdate(updated);
+  const handlePriorityChange = async (newPriority: TicketPriority) => {
+    setActionError('');
+    try {
+      await updateTicket(currentTicket.id, { priority: newPriority });
+      const updated = { ...currentTicket, priority: newPriority };
+      setCurrentTicket(updated); onUpdate(updated);
+    } catch (error: any) { setActionError(error?.message || 'Priority could not be updated.'); }
   };
 
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -148,8 +164,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-lg transition"><ArrowUpRight size={18}/></button>
-             <button className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-lg transition"><MoreVertical size={18}/></button>
              <button onClick={onClose} className="p-2 text-gray-500 hover:text-red-600 hover:bg-white rounded-lg transition"><X size={20}/></button>
           </div>
         </div>
@@ -171,6 +185,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
         </div>
 
         <div className="flex-1 overflow-hidden flex">
+          {actionError && <div className="absolute top-16 left-8 right-8 z-20 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 shadow">{actionError}</div>}
           {/* Main Content Switcher */}
           {activeTab === 'details' ? (
             <div className="flex-1 overflow-y-auto custom-scrollbar p-8 space-y-8">
@@ -263,8 +278,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                             <span className="text-sm font-bold text-gray-900">{msg.sender === 'Support' || msg.sender?.includes('Admin') ? 'Admin Support' : msg.sender || currentTicket.user}</span>
                             <span className="text-xs font-bold text-gray-400">{msg.timestamp}</span>
                          </div>
-                         {/* Render HTML safely if needed, currently just text for older messages */}
-                         <div className="bg-white/50 p-3 rounded-xl border border-white/50 shadow-sm text-sm text-gray-800 font-medium prose prose-sm prose-red max-w-none" dangerouslySetInnerHTML={{__html: msg.text}}></div>
+                         <div className="whitespace-pre-wrap bg-white/50 p-3 rounded-xl border border-white/50 shadow-sm text-sm text-gray-800 font-medium">{msg.text.replace(/<[^>]*>/g, '')}</div>
                       </div>
                     </div>
                     ))
@@ -303,10 +317,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
 
                   {/* Footer / Actions */}
                   <div className="flex justify-between items-center p-3 bg-white/10 border-t border-white/20">
-                       <div className="flex gap-2">
-                          <button className="p-2 hover:bg-black/5 rounded text-gray-400 transition" title="Attach File"><Paperclip size={18}/></button>
-                          <button className="p-2 hover:bg-black/5 rounded text-gray-400 transition" title="Insert Image"><ImageIcon size={18}/></button>
-                       </div>
+                       <span className="text-xs text-gray-400">Replies are stored on this ticket only.</span>
                        <button 
                           onClick={handleSendMessage} 
                           disabled={!replyText.trim() || isSendingMessage} 
@@ -321,10 +332,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
           ) : (
             /* History Tab Content */
             <div className="flex-1 overflow-y-auto custom-scrollbar p-8 animate-in fade-in">
-               <div className="flex justify-between items-center mb-6">
-                 <h3 className="font-bold text-gray-800 text-lg">Audit Log</h3>
-                 <button className="text-xs bg-white/50 hover:bg-white border border-white/60 px-3 py-1 rounded-lg text-gray-600 font-bold transition">Export Log</button>
-               </div>
+               <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 text-lg">Available Ticket History</h3></div>
                
                <div className="relative space-y-0 pl-2">
                   {/* Timeline Line */}
@@ -392,13 +400,6 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/30">
-               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2 block">Tags</label>
-               <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-bold flex items-center gap-1"><Tag size={10} /> Login</span>
-                  <button className="text-xs text-gray-400 hover:text-red-600 font-bold">+ Add</button>
-               </div>
-            </div>
           </div>
         </div>
       </div>

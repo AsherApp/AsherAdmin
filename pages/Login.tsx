@@ -24,15 +24,11 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', { email }); // Debug log
       const response = await login({
         email: email.trim().toLowerCase(),
         password,
       });
-      console.log('Login response received:', response); // Debug log
-      
       if (response.success) {
-        console.log('Login successful, navigating...'); // Debug log
         navigate('/');
       } else {
         console.error('Login failed:', response.message); // Debug log
@@ -52,7 +48,7 @@ const Login: React.FC = () => {
         <div className="glass-panel p-8 rounded-3xl shadow-2xl border border-white/60">
           {/* Logo/Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">NexusProp Admin</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Asher Admin</h1>
             <p className="text-gray-600 text-sm">Sign in to manage the Asher ecosystem</p>
           </div>
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { UserProfile, Ticket, TicketPriority } from '../../types';
 import { 
-  Mail, Phone, Clock, KeyRound, MessageSquare, Shield, X, 
+  Mail, Phone, Clock, KeyRound, Shield, X,
   Clock as ClockIcon, ChevronRight, AlertCircle, Plus, Save, Copy, Check,
   RefreshCw, Trash2, Link2, Loader, Eye, EyeOff
 } from 'lucide-react';
@@ -29,7 +29,7 @@ interface UserDetailModalProps {
 }
 
 const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpdate, onDelete }) => {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'messages' | 'settings'>(
+  const [activeTab, setActiveTab] = useState<'tickets' | 'settings'>(
     user.status === 'Pending Invite' ? 'settings' : 'tickets'
   );
   const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
@@ -120,7 +120,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     setInviteMessage('');
     try {
       const response = await resendLandlordInvite(user.id, true);
-      const data = response.data?.data || response.data || response;
+      const data = response.data;
       setInvitationLink(data.invitationLink || '');
       setInviteMessage(
         data.emailSent
@@ -140,7 +140,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     setInviteMessage('');
     try {
       const response = await resendLandlordInvite(user.id, false);
-      const data = response.data?.data || response.data || response;
+      const data = response.data;
       setInvitationLink(data.invitationLink || '');
       setInviteMessage('Invitation link generated. Copy and share it directly.');
     } catch (err: any) {
@@ -275,16 +275,12 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                </div>
             </div>
             <div className="mt-auto p-6 border-t border-white/20 bg-white/5 space-y-3">
-               {isPendingInvite ? (
+               {isPendingInvite && (
                  <button
                    onClick={() => setActiveTab('settings')}
                    className="w-full py-2.5 bg-red-50/80 hover:bg-red-100/80 border border-red-200/40 rounded-xl text-sm font-bold text-red-700 flex items-center justify-center gap-2 backdrop-blur-sm"
                  >
                    <Mail size={16} /> Manage Invitation
-                 </button>
-               ) : (
-                 <button className="w-full py-2.5 bg-white/30 hover:bg-white/50 border border-white/40 rounded-xl text-sm font-bold text-gray-700 flex items-center justify-center gap-2 backdrop-blur-sm">
-                   <KeyRound size={16} /> Reset Password
                  </button>
                )}
             </div>
@@ -295,7 +291,6 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
             <div className="h-18 border-b border-white/20 flex items-center justify-between px-8 bg-white/10 backdrop-blur-sm">
                <div className="flex gap-8 h-full pt-4">
                   <button onClick={() => setActiveTab('tickets')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'tickets' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Tickets</button>
-                  <button onClick={() => setActiveTab('messages')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'messages' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Messages</button>
                   <button onClick={() => setActiveTab('settings')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'settings' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Settings</button>
                </div>
                <button onClick={onClose} className="text-gray-500 hover:text-red-600 p-2"><X size={24} /></button>
@@ -404,14 +399,6 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                            </div>
                         </div>
                      )})}
-                  </div>
-               )}
-               {activeTab === 'messages' && (
-                  <div className="flex items-center justify-center h-full text-gray-500 font-medium">
-                    <div className="text-center">
-                       <MessageSquare size={48} className="mx-auto mb-4 opacity-30" />
-                       <p>No active chat sessions found.</p>
-                    </div>
                   </div>
                )}
                {activeTab === 'settings' && (

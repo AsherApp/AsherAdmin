@@ -6,7 +6,7 @@ export interface Ticket {
   ticketCode?: string; // Human-readable ticket code (e.g., LJA-2311251200)
   subject: string;
   description: string;
-  type: 'SUPPORT' | 'SUGGESTION';
+  type: 'SUPPORT' | 'SUGGESTION' | 'DISPUTE';
   priority: 'HIGH' | 'MEDIUM' | 'LOW' | 'PENDING';
   status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
   raisedById?: string;
@@ -67,12 +67,13 @@ export interface Ticket {
     createdAt: string;
     updatedAt: string;
   }>;
+  maintenance?: Record<string, any> & { disputeMessages?: Array<{ id: string; content: string; createdAt: string; sender?: { role?: string[] } }> };
 }
 
 export interface CreateTicketData {
   subject: string;
   description: string;
-  type: 'SUPPORT' | 'SUGGESTION';
+  type: 'SUPPORT' | 'SUGGESTION' | 'DISPUTE';
   priority?: 'HIGH' | 'MEDIUM' | 'LOW' | 'PENDING';
   attachments?: string[];
   raisedByUserId?: string;
@@ -99,7 +100,8 @@ export const mapApiTicketToUiTicket = (
     t.raisedBy?.user?.email ||
     'Unknown';
 
-  const mappedMessages = (t.messages || []).map((msg) => {
+  const ticketMessages = [...(t.messages || []), ...((t.type === 'DISPUTE' && t.maintenance?.disputeMessages) || [])];
+  const mappedMessages = ticketMessages.map((msg: any) => {
     const isStaff =
       msg.sender?.role?.includes('ADMIN') ||
       msg.sender?.role?.includes('LANDLORD');
@@ -133,6 +135,8 @@ export const mapApiTicketToUiTicket = (
       : TicketPriority.MEDIUM,
     createdAt: t.createdAt,
     messages: mappedMessages,
+    type: t.type,
+    maintenance: t.type === 'DISPUTE' ? t.maintenance : undefined,
   };
 };
 
@@ -166,15 +170,8 @@ const parseTicketListResponse = (
  * Backend returns: { data: Ticket[], pagination: { totalItems, totalPages, currentPage, itemsPerPage, hasNextPage, hasPreviousPage } }
  */
 export const getAllTickets = async (page: number = 1, limit: number = 50, search: string = ''): Promise<{ data: Ticket[]; total: number }> => {
-  try {
-    const response = await api.get(
-      `/admin/tickets?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
-    );
-    return parseTicketListResponse(response as Record<string, unknown>);
-  } catch (error: unknown) {
-    console.error('Error fetching tickets:', error);
-    return { data: [], total: 0 };
-  }
+  const response = await api.get(`/admin/tickets?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+  return parseTicketListResponse(response as Record<string, unknown>);
 };
 
 /**
@@ -186,15 +183,8 @@ export const getTicketsByUserId = async (
   limit: number = 100,
   search: string = ''
 ): Promise<{ data: Ticket[]; total: number }> => {
-  try {
-    const response = await api.get(
-      `/admin/users/${userId}/tickets?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`
-    );
-    return parseTicketListResponse(response as Record<string, unknown>);
-  } catch (error: unknown) {
-    console.error('Error fetching user tickets:', error);
-    return { data: [], total: 0 };
-  }
+  const response = await api.get(`/admin/users/${userId}/tickets?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+  return parseTicketListResponse(response as Record<string, unknown>);
 };
 
 /**

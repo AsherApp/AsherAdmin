@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { UserProfile } from '../../types';
-import { MoreVertical } from 'lucide-react';
 import { getSystemDetails } from '../../utils/uiHelpers';
 
 interface UserTableProps {
@@ -25,7 +24,6 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
               <th className="p-5 font-bold uppercase tracking-wider">System Access</th>
               <th className="p-5 font-bold uppercase tracking-wider">Status</th>
               <th className="p-5 font-bold uppercase tracking-wider">Last Active</th>
-              <th className="p-5 font-bold uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -71,9 +69,6 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                     </span>
                   </td>
                   <td className="p-5 text-sm text-gray-500 font-mono">{user.lastActive}</td>
-                  <td className="p-5 text-right">
-                    <button className="text-gray-400 hover:text-red-600 transition p-2 rounded-full hover:bg-white/50"><MoreVertical size={18} /></button>
-                  </td>
                 </tr>
               )
             })}
