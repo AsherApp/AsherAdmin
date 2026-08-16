@@ -29,6 +29,12 @@ type FormState = {
   adDurationIncreasePercent: string;
   adLocationIncreasePercent: string;
   adBannerPremiumPercent: string;
+  storageAddonEnabled: boolean;
+  storageAddonGb: string;
+  storageAddonPriceGbp: string;
+  storageAddonPriceNgn: string;
+  storageAddonPriceUsd: string;
+  storageAddonPriceEur: string;
 };
 
 const toForm = (config: ListingMonetizationConfig): FormState => ({
@@ -54,6 +60,12 @@ const toForm = (config: ListingMonetizationConfig): FormState => ({
   adDurationIncreasePercent: String(config.ads?.durationIncreasePercent ?? 30),
   adLocationIncreasePercent: String(config.ads?.locationIncreasePercent ?? 30),
   adBannerPremiumPercent: String(config.ads?.bannerPremiumPercent ?? 50),
+  storageAddonEnabled: config.storage?.enabled === true,
+  storageAddonGb: String(config.storage?.addonGb ?? 5),
+  storageAddonPriceGbp: String(config.storage?.prices.GBP ?? 0),
+  storageAddonPriceNgn: String(config.storage?.prices.NGN ?? 0),
+  storageAddonPriceUsd: String(config.storage?.prices.USD ?? 0),
+  storageAddonPriceEur: String(config.storage?.prices.EUR ?? 0),
 });
 
 const Field = ({
@@ -145,10 +157,16 @@ const ListingMonetizationConfigPage: React.FC = () => {
         adDurationIncreasePercent: Number(form.adDurationIncreasePercent),
         adLocationIncreasePercent: Number(form.adLocationIncreasePercent),
         adBannerPremiumPercent: Number(form.adBannerPremiumPercent),
+        storageAddonEnabled: form.storageAddonEnabled,
+        storageAddonGb: Number(form.storageAddonGb),
+        storageAddonPriceGbp: Number(form.storageAddonPriceGbp),
+        storageAddonPriceNgn: Number(form.storageAddonPriceNgn),
+        storageAddonPriceUsd: Number(form.storageAddonPriceUsd),
+        storageAddonPriceEur: Number(form.storageAddonPriceEur),
       });
       setForm(toForm(updated));
       setUpdatedAt(updated.updatedAt);
-      setSuccess('System fees saved. Listings, relocate posts, and tenant ads will use these values.');
+      setSuccess('System fees saved. Listings, ads, and storage purchases will use these values.');
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -165,10 +183,10 @@ const ListingMonetizationConfigPage: React.FC = () => {
       <div>
         <h2 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-gray-800">
           <Settings2 className="text-red-600" />
-          Listing & ads pricing
+          Platform pricing
         </h2>
         <p className="mt-1 text-sm font-medium text-gray-600">
-          Platform system config for listings, relocate posts, and tenant ads.
+          Platform system config for listings, relocate posts, tenant ads, and storage add-ons.
           Charged from landlord or tenant wallets by currency. Ads money goes
           to the Admin wallet.
         </p>
@@ -364,6 +382,33 @@ const ListingMonetizationConfigPage: React.FC = () => {
                 onChange={(v) => setField('adBaseEur', v)}
               />
             </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
+            <h3 className="text-lg font-bold text-gray-800">Landlord storage add-ons</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Every landlord starts with 5 GB free. Enable add-ons and set the pack size and wallet price for each currency.
+            </p>
+            <label className="mt-4 flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={form.storageAddonEnabled}
+                onChange={(e) => {
+                  setForm((prev) => prev ? { ...prev, storageAddonEnabled: e.target.checked } : prev);
+                  setSuccess('');
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm font-semibold text-gray-800">Allow landlords to buy extra storage</span>
+            </label>
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <Field label="GB per pack" value={form.storageAddonGb} onChange={(v) => setField('storageAddonGb', v)} hint="Added permanently after payment." />
+              <Field label="Price (GBP)" value={form.storageAddonPriceGbp} onChange={(v) => setField('storageAddonPriceGbp', v)} />
+              <Field label="Price (NGN)" value={form.storageAddonPriceNgn} onChange={(v) => setField('storageAddonPriceNgn', v)} />
+              <Field label="Price (USD)" value={form.storageAddonPriceUsd} onChange={(v) => setField('storageAddonPriceUsd', v)} />
+              <Field label="Price (EUR)" value={form.storageAddonPriceEur} onChange={(v) => setField('storageAddonPriceEur', v)} />
+            </div>
+            <p className="mt-3 text-xs text-amber-700">Purchasing remains unavailable when disabled or when the selected currency price is zero.</p>
           </section>
 
           <div className="flex justify-end">

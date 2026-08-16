@@ -236,6 +236,13 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // PUT request
+  put: (endpoint: string, data?: any) =>
+    apiRequest(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
   // PATCH request
   patch: (endpoint: string, data?: any) =>
     apiRequest(endpoint, {
@@ -257,4 +264,3 @@ export const api = {
 };
 
 export default api;
-

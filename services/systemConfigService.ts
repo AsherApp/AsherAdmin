@@ -21,6 +21,11 @@ export type ListingMonetizationConfig = {
       EUR: number;
     };
   };
+  storage?: {
+    enabled: boolean;
+    addonGb: number;
+    prices: { GBP: number; NGN: number; USD: number; EUR: number };
+  };
   updatedAt?: string;
   updatedById?: string | null;
 };
@@ -48,6 +53,12 @@ export type ListingMonetizationUpdate = {
   adDurationIncreasePercent?: number;
   adLocationIncreasePercent?: number;
   adBannerPremiumPercent?: number;
+  storageAddonEnabled?: boolean;
+  storageAddonGb?: number;
+  storageAddonPriceGbp?: number;
+  storageAddonPriceNgn?: number;
+  storageAddonPriceUsd?: number;
+  storageAddonPriceEur?: number;
 };
 
 export const getListingMonetizationConfig =

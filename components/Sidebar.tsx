@@ -42,7 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
     { id: 'systems', label: 'System Monitor', icon: Activity },
     { id: 'landlords', label: 'Landlords', icon: Users },
     { id: 'vendors', label: 'Vendors', icon: Wrench },
-    { id: 'listing-monetization', label: 'Listing & Ads Fees', icon: Coins },
+    { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
     { id: 'finance', label: 'Platform Finance', icon: Wallet },
     { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
     { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },

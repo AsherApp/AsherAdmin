@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Users, ShieldCheck } from 'lucide-react';
+import { Users, ShieldCheck, HardDrive } from 'lucide-react';
 import UserManagement from './UserManagement';
 import IdentityVerificationReview from './IdentityVerificationReview';
+import StorageManagement from './StorageManagement';
 
-type LandlordsTab = 'directory' | 'identity-verification';
+type LandlordsTab = 'directory' | 'identity-verification' | 'storage';
 
 // Groups the two landlord-facing admin pages that were previously separate
 // top-level nav items ("User Directory" + "Identity Review") under one
@@ -16,6 +17,7 @@ const LandlordsSection: React.FC = () => {
   const tabs: { id: LandlordsTab; label: string; icon: React.ElementType }[] = [
     { id: 'directory', label: 'Directory', icon: Users },
     { id: 'identity-verification', label: 'Identity Verification', icon: ShieldCheck },
+    { id: 'storage', label: 'Storage', icon: HardDrive },
   ];
 
   return (
@@ -35,7 +37,9 @@ const LandlordsSection: React.FC = () => {
         ))}
       </div>
 
-      {tab === 'directory' ? <UserManagement /> : <IdentityVerificationReview />}
+      {tab === 'directory' && <UserManagement />}
+      {tab === 'identity-verification' && <IdentityVerificationReview />}
+      {tab === 'storage' && <StorageManagement />}
     </div>
   );
 };
