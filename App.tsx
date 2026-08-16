@@ -5,13 +5,11 @@ import Dashboard from './components/Dashboard';
 import SystemMonitor from './components/SystemMonitor';
 import TicketSystem from './components/TicketSystem';
 import FileLibrary from './components/FileLibrary';
-import UserManagement from './components/UserManagement';
-import IdentityVerificationReview from './components/IdentityVerificationReview';
-import VendorManagement from './components/VendorManagement';
-import VendorVerificationReview from './components/VendorVerificationReview';
-import VendorDocumentRequirements from './components/VendorDocumentRequirements';
+import LandlordsSection from './components/LandlordsSection';
+import VendorsSection from './components/VendorsSection';
 import ListingMonetizationConfig from './components/ListingMonetizationConfig';
 import PlatformFinance from './components/PlatformFinance';
+import FinancialReports from './components/FinancialReports';
 import PropertyComplianceOverview from './components/PropertyComplianceOverview';
 import Inbox from './components/Inbox';
 import EmailSystem from './components/EmailSystem';
@@ -185,13 +183,11 @@ const DashboardLayout: React.FC = () => {
     switch (currentTab) {
       case 'dashboard': return <Dashboard />;
       case 'systems': return <SystemMonitor />;
-      case 'users': return <UserManagement />;
-      case 'identity-review': return <IdentityVerificationReview />;
-      case 'vendors': return <VendorManagement />;
-      case 'vendor-verification': return <VendorVerificationReview />;
-      case 'vendor-document-requirements': return <VendorDocumentRequirements />;
+      case 'landlords': return <LandlordsSection />;
+      case 'vendors': return <VendorsSection />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
       case 'finance': return <PlatformFinance />;
+      case 'financial-reports': return <FinancialReports />;
       case 'compliance': return <PropertyComplianceOverview />;
       case 'tickets': return <TicketSystem />;
       case 'inbox': return <Inbox />;
@@ -318,8 +314,8 @@ const DashboardLayout: React.FC = () => {
            <div className="glass-panel w-64 h-full pt-20 px-4 border-r border-white/50" onClick={(e) => e.stopPropagation()}>
               <button onClick={() => { setCurrentTab('dashboard'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Dashboard</button>
               <button onClick={() => { setCurrentTab('systems'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Systems</button>
-              <button onClick={() => { setCurrentTab('users'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">User Directory</button>
-              <button onClick={() => { setCurrentTab('identity-review'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Identity Review</button>
+              <button onClick={() => { setCurrentTab('landlords'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Landlords</button>
+              <button onClick={() => { setCurrentTab('vendors'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Vendors</button>
               <button onClick={() => { setCurrentTab('tickets'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Tickets</button>
               <button onClick={() => { setCurrentTab('email'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Internal Mail</button>
               <button onClick={() => { setCurrentTab('inbox'); setIsMobileMenuOpen(false); }} className="block w-full text-left py-3 px-2 border-b border-white/20 font-medium hover:bg-white/40 rounded-lg transition-all">Live Chat</button>

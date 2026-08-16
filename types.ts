@@ -3,7 +3,8 @@ export enum SystemStatus {
   OPERATIONAL = 'Operational',
   DEGRADED = 'Degraded',
   MAINTENANCE = 'Maintenance',
-  DOWN = 'Down'
+  DOWN = 'Down',
+  NOT_MONITORED = 'Not monitored'
 }
 
 export enum TicketPriority {
@@ -25,8 +26,8 @@ export interface MonitoredSystem {
   name: string;
   type: 'Mobile App' | 'Web App' | 'Website';
   status: SystemStatus;
-  uptime: number; // percentage
-  activeUsers: number;
+  uptime: number | null; // percentage; null when not yet integrated with live monitoring
+  activeUsers: number | null;
   lastCheck: string;
   version: string;
 }

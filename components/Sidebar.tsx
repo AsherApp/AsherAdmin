@@ -14,12 +14,11 @@ import {
   ChevronRight,
   Mail,
   HelpCircle,
-  ShieldCheck,
   ClipboardCheck,
   Wrench,
-  FileCheck,
   Coins,
   Wallet,
+  BarChart3,
 } from 'lucide-react';
 import { logout } from '../services/authService';
 
@@ -41,13 +40,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapse
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'systems', label: 'System Monitor', icon: Activity },
-    { id: 'users', label: 'User Directory', icon: Users },
-    { id: 'identity-review', label: 'Identity Review', icon: ShieldCheck },
+    { id: 'landlords', label: 'Landlords', icon: Users },
     { id: 'vendors', label: 'Vendors', icon: Wrench },
-    { id: 'vendor-verification', label: 'Vendor Verification', icon: ShieldCheck },
-    { id: 'vendor-document-requirements', label: 'Vendor Onboarding', icon: FileCheck },
     { id: 'listing-monetization', label: 'Listing & Ads Fees', icon: Coins },
     { id: 'finance', label: 'Platform Finance', icon: Wallet },
+    { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
     { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
     { id: 'tickets', label: 'Support Tickets', icon: Ticket },
     { id: 'email', label: 'Internal Mail', icon: Mail },

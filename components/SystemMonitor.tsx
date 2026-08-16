@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { MonitoredSystem, SystemStatus } from '../types';
-import { Server, Smartphone, Globe, ShieldCheck, Activity, Loader } from 'lucide-react';
+import { Server, Smartphone, Globe } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
-import { getSystemHealth, getActivityData, SystemHealth } from '../services/analyticsService';
+import { getSystemHealth, getActivityData } from '../services/analyticsService';
 
 const SystemMonitor: React.FC = () => {
-  const [rentMgmtSystem, setRentMgmtSystem] = useState<SystemHealth | null>(null);
   const [activityData, setActivityData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  // Mock data for other systems (not integrated yet - will be replaced when those systems are integrated)
-  // Rent Mgmt System (id: '4') will be populated with real data from API
+
+  // Only Rent Mgmt System (id: '4') is wired to live health data today (see
+  // getSystemHealth() below). The other apps are real products but have no
+  // health-check/analytics endpoint yet — show them as not-yet-monitored
+  // rather than inventing uptime/user numbers for them.
   const [systems, setSystems] = useState<MonitoredSystem[]>([
-    { id: '1', name: 'Tenant Portal Mobile', type: 'Mobile App', status: SystemStatus.OPERATIONAL, uptime: 99.9, activeUsers: 1240, lastCheck: 'Just now', version: 'v2.4.1' },
-    { id: '2', name: 'Vendor Mobile App', type: 'Mobile App', status: SystemStatus.OPERATIONAL, uptime: 99.5, activeUsers: 85, lastCheck: 'Just now', version: 'v1.8.0' },
-    { id: '3', name: 'Listing Website', type: 'Website', status: SystemStatus.DEGRADED, uptime: 98.2, activeUsers: 3420, lastCheck: '1 min ago', version: 'v4.0.2' },
-    { id: '4', name: 'Rent Mgmt System', type: 'Web App', status: SystemStatus.OPERATIONAL, uptime: 0, activeUsers: 0, lastCheck: 'Loading...', version: 'v3.1.0' }, // Will be replaced with real data
-    { id: '5', name: 'Admin Dashboard', type: 'Web App', status: SystemStatus.MAINTENANCE, uptime: 100, activeUsers: 5, lastCheck: '5 mins ago', version: 'v2.0.0' },
+    { id: '1', name: 'Tenant Portal Mobile', type: 'Mobile App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
+    { id: '2', name: 'Vendor Mobile App', type: 'Mobile App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
+    { id: '3', name: 'Listing Website', type: 'Website', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
+    { id: '4', name: 'Rent Mgmt System', type: 'Web App', status: SystemStatus.OPERATIONAL, uptime: 0, activeUsers: 0, lastCheck: 'Loading...', version: 'v3.1.0' }, // Replaced with real data below
+    { id: '5', name: 'Admin Dashboard', type: 'Web App', status: SystemStatus.NOT_MONITORED, uptime: null, activeUsers: null, lastCheck: 'Not integrated', version: '—' },
   ]);
 
   useEffect(() => {
@@ -32,12 +32,10 @@ const SystemMonitor: React.FC = () => {
 
   const loadSystemHealth = async () => {
     try {
-      setLoading(true);
       console.log('🔄 Loading Rent Management System health...');
       const health = await getSystemHealth();
       console.log('✅ System health loaded:', health);
-      setRentMgmtSystem(health);
-      
+
       // Update Rent Mgmt System in systems array with real data
       setSystems(prevSystems => {
         return prevSystems.map(sys => {
@@ -75,8 +73,6 @@ const SystemMonitor: React.FC = () => {
         response: error.response,
       });
       // Keep existing data on error, don't reset to mock
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -115,6 +111,7 @@ const SystemMonitor: React.FC = () => {
       case SystemStatus.DEGRADED: return 'bg-yellow-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]';
       case SystemStatus.MAINTENANCE: return 'bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]';
       case SystemStatus.DOWN: return 'bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.6)]';
+      case SystemStatus.NOT_MONITORED: return 'bg-gray-400';
       default: return 'bg-gray-400';
     }
   };
@@ -141,8 +138,8 @@ const SystemMonitor: React.FC = () => {
         {systems.map((sys) => (
           <div key={sys.id} className="glass-panel rounded-3xl p-6 relative overflow-hidden group transition-all hover:-translate-y-1 hover:shadow-2xl">
             {/* Gradient Glow Background */}
-            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full opacity-20 blur-3xl group-hover:opacity-40 transition-opacity ${sys.status === SystemStatus.OPERATIONAL ? 'bg-green-500' : sys.status === SystemStatus.DEGRADED ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
-            
+            <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full opacity-20 blur-3xl group-hover:opacity-40 transition-opacity ${sys.status === SystemStatus.OPERATIONAL ? 'bg-green-500' : sys.status === SystemStatus.DEGRADED ? 'bg-yellow-500' : sys.status === SystemStatus.NOT_MONITORED ? 'bg-gray-400' : 'bg-blue-500'}`}></div>
+
             <div className="flex justify-between items-start mb-4 relative z-10">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-white/60 backdrop-blur-md rounded-2xl text-red-600 shadow-sm border border-white/50">
@@ -156,9 +153,10 @@ const SystemMonitor: React.FC = () => {
               <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 backdrop-blur-sm border ${
                 sys.status === SystemStatus.OPERATIONAL ? 'bg-green-100/60 text-green-700 border-green-200' :
                 sys.status === SystemStatus.DEGRADED ? 'bg-yellow-100/60 text-yellow-700 border-yellow-200' :
+                sys.status === SystemStatus.NOT_MONITORED ? 'bg-gray-100/60 text-gray-500 border-gray-200' :
                 'bg-blue-100/60 text-blue-700 border-blue-200'
               }`}>
-                <span className={`w-2 h-2 rounded-full ${getStatusColor(sys.status)} animate-pulse`}></span>
+                <span className={`w-2 h-2 rounded-full ${getStatusColor(sys.status)} ${sys.status !== SystemStatus.NOT_MONITORED ? 'animate-pulse' : ''}`}></span>
                 {sys.status}
               </div>
             </div>
@@ -166,34 +164,21 @@ const SystemMonitor: React.FC = () => {
             <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
               <div className="bg-white/30 rounded-xl p-3 border border-white/40">
                 <p className="text-xs text-gray-500 font-medium mb-1">Uptime</p>
-                <p className="text-xl font-bold text-gray-800">{sys.uptime}%</p>
+                <p className="text-xl font-bold text-gray-800">{sys.uptime === null ? '—' : `${sys.uptime}%`}</p>
               </div>
               <div className="bg-white/30 rounded-xl p-3 border border-white/40">
                 <p className="text-xs text-gray-500 font-medium mb-1">Active Users</p>
-                <p className="text-xl font-bold text-gray-800">{sys.activeUsers.toLocaleString()}</p>
+                <p className="text-xl font-bold text-gray-800">{sys.activeUsers === null ? '—' : sys.activeUsers.toLocaleString()}</p>
               </div>
             </div>
 
             <div className="h-20 w-full opacity-80 relative z-10 -ml-2">
               <ResponsiveContainer width="105%" height="100%">
                 <AreaChart data={
-                  // Use real activity data for Rent Mgmt System (id: '4')
-                  sys.id === '4' && activityData.length > 0 
-                    ? activityData 
-                    : sys.id === '4' && loading
-                    ? [] // Show empty chart while loading
-                    : sys.id === '4'
-                    ? [] // Show empty chart if no data available (don't use mock)
-                    : [
-                      // Mock data only for other systems (not integrated yet)
-                      { time: 'Mon', load: 20 },
-                      { time: 'Tue', load: 35 },
-                      { time: 'Wed', load: 50 },
-                      { time: 'Thu', load: 45 },
-                      { time: 'Fri', load: 60 },
-                      { time: 'Sat', load: 30 },
-                      { time: 'Sun', load: 25 },
-                    ]
+                  // Only the Rent Mgmt System (id: '4') has a real activity
+                  // feed; every other system shows an empty chart until it's
+                  // actually integrated with live monitoring.
+                  sys.id === '4' ? activityData : []
                 }>
                    <defs>
                     <linearGradient id={`grad-${sys.id}`} x1="0" y1="0" x2="0" y2="1">

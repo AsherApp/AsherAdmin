@@ -113,37 +113,19 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
     }
   };
 
-  // Generate mock history if none exists
+  // Real history only. If the backend hasn't sent an activity log for this
+  // ticket, the one entry we can honestly show is creation itself, derived
+  // from the ticket's own real fields — not invented status/priority/
+  // assignee events that may never have happened.
   const getHistory = (): TicketHistory[] => {
     if (ticket.history) return ticket.history;
     const sysName = getSystemDetails(ticket.sourceSystemId).name;
     return [
-      { 
-        id: 'h-status', 
-        action: 'Status Updated', 
-        user: 'Admin (You)', 
-        timestamp: 'Just now', 
-        details: `Status changed to ${ticket.status}`
-      },
-      { 
-        id: 'h-prio', 
-        action: 'Priority Changed', 
-        user: 'System Rule', 
-        timestamp: new Date(new Date(ticket.createdAt).getTime() + 3600000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), 
-        details: `Priority auto-set to ${ticket.priority} based on keywords`
-      },
       {
-        id: 'h-assign',
-        action: 'Assignee Updated',
-        user: 'System',
-        timestamp: new Date(new Date(ticket.createdAt).getTime() + 60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        details: 'Assigned to Admin Support'
-      },
-      { 
-        id: 'h-create', 
-        action: 'Ticket Created', 
-        user: ticket.user, 
-        timestamp: new Date(ticket.createdAt).toLocaleString(), 
+        id: 'h-create',
+        action: 'Ticket Created',
+        user: ticket.user,
+        timestamp: new Date(ticket.createdAt).toLocaleString(),
         details: `Ticket created via ${sysName}`
       },
     ];

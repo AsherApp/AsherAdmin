@@ -7,31 +7,21 @@ import {
   Activity,
   Loader
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
-import { getSystemStats, getActivityData, SystemStats, ActivityData } from '../services/analyticsService';
-
-const systemHealthData = [
-  { name: 'Tenant App', value: 98 },
-  { name: 'Vendor App', value: 85 },
-  { name: 'Website', value: 45 },
-  { name: 'Rent Sys', value: 100 },
-  { name: 'Admin', value: 92 },
-];
+import { getSystemStats, getActivityData, getSystemHealth, SystemStats, ActivityData, SystemHealth } from '../services/analyticsService';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
+  const [backendHealth, setBackendHealth] = useState<SystemHealth | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,13 +35,15 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       console.log('🔄 Loading dashboard data...');
-      const [statsData, activityData] = await Promise.all([
+      const [statsData, activityData, health] = await Promise.all([
         getSystemStats(),
         getActivityData(),
+        getSystemHealth().catch(() => null),
       ]);
-      console.log('✅ Dashboard data loaded:', { statsData, activityData });
+      console.log('✅ Dashboard data loaded:', { statsData, activityData, health });
       setStats(statsData);
       setActivityData(activityData);
+      setBackendHealth(health);
     } catch (error: any) {
       console.error('❌ Error loading dashboard data:', error);
       console.error('Error details:', {
@@ -74,6 +66,7 @@ const Dashboard: React.FC = () => {
         userGrowth: 0,
       });
       setActivityData([]);
+      setBackendHealth(null);
     } finally {
       setLoading(false);
     }
@@ -185,32 +178,41 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* System Health Bars */}
+        {/* Backend Status — real data only; the other apps (tenant/vendor
+            mobile, listing website) have no health-check endpoint yet, so
+            we don't fabricate scores for them here. */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col">
-          <h3 className="font-bold text-gray-800 mb-6 text-lg">System Health Score</h3>
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={systemHealthData} layout="vertical" barSize={24}>
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" width={100} fontSize={12} tickLine={false} axisLine={false} stroke="#6B7280" fontWeight={500} />
-                <Tooltip 
-                  cursor={{fill: 'rgba(220, 38, 38, 0.05)', radius: 8}} 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '12px',
-                    border: 'none',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }} 
-                />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                  {systemHealthData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value < 50 ? '#EF4444' : entry.value < 90 ? '#F59E0B' : '#10B981'} fillOpacity={0.8} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <h3 className="font-bold text-gray-800 mb-6 text-lg">Backend Status</h3>
+          {backendHealth ? (
+            <div className="flex-1 flex flex-col justify-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className={`w-3 h-3 rounded-full ${
+                  backendHealth.status === 'OPERATIONAL' ? 'bg-green-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' :
+                  backendHealth.status === 'DEGRADED' ? 'bg-yellow-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]' :
+                  backendHealth.status === 'MAINTENANCE' ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]' :
+                  'bg-red-600 shadow-[0_0_12px_rgba(220,38,38,0.5)]'
+                } animate-pulse`}></span>
+                <span className="text-lg font-bold text-gray-800">{backendHealth.name || 'Rent Mgmt System'}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/30 rounded-xl p-3 border border-white/40">
+                  <p className="text-xs text-gray-500 font-medium mb-1">Status</p>
+                  <p className="text-sm font-bold text-gray-800">{backendHealth.status}</p>
+                </div>
+                <div className="bg-white/30 rounded-xl p-3 border border-white/40">
+                  <p className="text-xs text-gray-500 font-medium mb-1">Uptime</p>
+                  <p className="text-sm font-bold text-gray-800">{Math.round(backendHealth.uptime || 0)}%</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 font-medium">
+                Other apps (tenant/vendor mobile, listing website) aren't wired to live monitoring yet — see System Monitor.
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm font-medium">
+              Backend status unavailable
+            </div>
+          )}
         </div>
       </div>
       
@@ -240,13 +242,22 @@ const Dashboard: React.FC = () => {
                   <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
                </div>
             )}
-            <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/60 hover:bg-white/60 transition-colors">
-               <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]"></div>
-                  <span className="text-sm font-semibold text-gray-800">Rent Management System Operational</span>
+            {backendHealth && (
+               <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/60 hover:bg-white/60 transition-colors">
+                  <div className="flex items-center gap-4">
+                     <div className={`w-3 h-3 rounded-full ${
+                       backendHealth.status === 'OPERATIONAL' ? 'bg-green-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]' :
+                       backendHealth.status === 'DEGRADED' ? 'bg-yellow-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' :
+                       backendHealth.status === 'MAINTENANCE' ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]' :
+                       'bg-red-600 shadow-[0_0_12px_rgba(220,38,38,0.4)]'
+                     }`}></div>
+                     <span className="text-sm font-semibold text-gray-800">
+                        {backendHealth.name || 'Rent Management System'} {backendHealth.status === 'OPERATIONAL' ? 'Operational' : backendHealth.status.charAt(0) + backendHealth.status.slice(1).toLowerCase()}
+                     </span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
                </div>
-               <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
-            </div>
+            )}
          </div>
       </div>
     </div>
