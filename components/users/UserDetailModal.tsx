@@ -7,6 +7,7 @@ import {
   RefreshCw, Trash2, Link2, Loader, Eye, EyeOff
 } from 'lucide-react';
 import { getSystemDetails, getPriorityColor, getStatusColor } from '../../utils/uiHelpers';
+import { PRESENCE_DOT, resolvePresence } from '../../utils/presence';
 import TicketDetailModal from '../tickets/TicketDetailModal';
 import {
   resendLandlordInvite,
@@ -41,7 +42,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const [invitationLink, setInvitationLink] = useState('');
   const [tempPassword, setTempPassword] = useState('');
   const [showTempPassword, setShowTempPassword] = useState(false);
-  const [inviteLoading, setInviteLoading] = useState<'resend' | 'link' | 'temp' | 'cancel' | 'delete' | null>(null);
+  const [inviteLoading, setInviteLoading] = useState<'resend' | 'link' | 'temp' | 'cancel' | 'delete' | 'suspend' | null>(null);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -271,7 +272,28 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                <div className="space-y-4">
                   <div className="flex items-center gap-3 text-sm font-medium bg-white/20 p-3 rounded-xl border border-white/30"><Mail size={16} className="text-red-600"/> <span className="truncate">{user.email}</span></div>
                   <div className="flex items-center gap-3 text-sm font-medium bg-white/20 p-3 rounded-xl border border-white/30"><Phone size={16} className="text-red-600"/> <span>{user.phone || 'No phone'}</span></div>
-                  <div className="flex items-center gap-3 text-sm font-medium bg-white/20 p-3 rounded-xl border border-white/30"><Clock size={16} className="text-red-600"/> <span>{user.lastActive}</span></div>
+                  <div className="flex items-center gap-3 text-sm font-medium bg-white/20 p-3 rounded-xl border border-white/30">
+                    {user.status === 'Pending Invite' || user.status === 'Suspended' ? (
+                      <>
+                        <Clock size={16} className="text-red-600"/>
+                        <span>{user.lastActive}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Clock size={16} style={{ color: PRESENCE_DOT[resolvePresence(user)] }} />
+                        <span
+                          className="flex items-center gap-2"
+                          style={{ color: PRESENCE_DOT[resolvePresence(user)] }}
+                        >
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: PRESENCE_DOT[resolvePresence(user)] }}
+                          />
+                          {user.lastActive}
+                        </span>
+                      </>
+                    )}
+                  </div>
                </div>
             </div>
             <div className="mt-auto p-6 border-t border-white/20 bg-white/5 space-y-3">
@@ -282,6 +304,32 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                  >
                    <Mail size={16} /> Manage Invitation
                  </button>
+               )}
+               {!isPendingInvite && (
+                 <>
+                   <button
+                     onClick={handleToggleSuspension}
+                     disabled={inviteLoading !== null}
+                     className="w-full py-2.5 bg-white/70 hover:bg-white border border-red-200/50 rounded-xl text-sm font-bold text-red-700 flex items-center justify-center gap-2 disabled:opacity-50"
+                   >
+                     {inviteLoading === 'suspend' ? <Loader className="animate-spin" size={16} /> : <Shield size={16} />}
+                     {user.status === 'Suspended' ? 'Reinstate account' : 'Suspend account'}
+                   </button>
+                   <button
+                     onClick={handleDeleteAccount}
+                     disabled={inviteLoading !== null}
+                     className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                   >
+                     {inviteLoading === 'delete' ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                     Delete account
+                   </button>
+                 </>
+               )}
+               {inviteError && (
+                 <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{inviteError}</p>
+               )}
+               {inviteMessage && (
+                 <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg p-2">{inviteMessage}</p>
                )}
             </div>
           </div>

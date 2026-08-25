@@ -18,6 +18,8 @@ export interface Vendor {
   systemId?: string;
   status?: UserProfile['status'];
   lastActive?: string;
+  presence?: 'online' | 'away' | 'offline';
+  lastSeenAt?: string | null;
   phone?: string;
   createdAt: string;
   vendorId: string | null;
@@ -43,6 +45,8 @@ export const mapVendorToProfile = (vendor: Vendor): VendorUserProfile => ({
   systemId: vendor.systemId || '2',
   status: vendor.status || 'Active',
   lastActive: vendor.lastActive || 'Invitation sent',
+  presence: vendor.presence,
+  lastSeenAt: vendor.lastSeenAt,
   phone: vendor.phone || '',
   ticketsRaised: 0,
   vendorId: vendor.vendorId,

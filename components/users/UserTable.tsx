@@ -2,6 +2,7 @@
 import React from 'react';
 import { UserProfile } from '../../types';
 import { getSystemDetails } from '../../utils/uiHelpers';
+import { PRESENCE_DOT, PRESENCE_LABEL, resolvePresence } from '../../utils/presence';
 
 interface UserTableProps {
   users: UserProfile[];
@@ -68,7 +69,30 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                       {user.status}
                     </span>
                   </td>
-                  <td className="p-5 text-sm text-gray-500 font-mono">{user.lastActive}</td>
+                  <td className="p-5">
+                    <div className="flex items-center gap-2 text-sm font-mono text-gray-600">
+                      {user.status === 'Pending Invite' || user.status === 'Suspended' ? (
+                        <span>{user.lastActive}</span>
+                      ) : (
+                        <>
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{
+                              backgroundColor:
+                                PRESENCE_DOT[resolvePresence(user)],
+                            }}
+                          />
+                          <span
+                            style={{
+                              color: PRESENCE_DOT[resolvePresence(user)],
+                            }}
+                          >
+                            {user.lastActive || PRESENCE_LABEL[resolvePresence(user)]}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               )
             })}

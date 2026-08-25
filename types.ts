@@ -90,6 +90,8 @@ export interface UserProfile {
   systemId: string; // The primary system they belong to
   status: 'Active' | 'Inactive' | 'Suspended' | 'Pending Invite';
   lastActive: string;
+  presence?: 'online' | 'away' | 'offline';
+  lastSeenAt?: string | null;
   avatarUrl?: string;
   phone?: string;
   ticketsRaised?: number;

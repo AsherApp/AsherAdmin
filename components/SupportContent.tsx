@@ -589,7 +589,7 @@ const SupportContent: React.FC = () => {
                               <h3 className="font-bold text-gray-900">{agent.name}</h3>
                               <span className={`px-2 py-1 rounded-lg text-xs font-semibold ${
                                 agent.status === 'online' ? 'bg-green-100 text-green-700' :
-                                agent.status === 'away' ? 'bg-yellow-100 text-yellow-700' :
+                                agent.status === 'away' ? 'bg-orange-100 text-orange-700' :
                                 agent.status === 'busy' ? 'bg-red-100 text-red-700' :
                                 'bg-gray-100 text-gray-700'
                               }`}>

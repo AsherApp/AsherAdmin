@@ -19,6 +19,8 @@ export interface User {
   name?: string;
   systemId?: string;
   lastActive?: string;
+  presence?: 'online' | 'away' | 'offline';
+  lastSeenAt?: string | null;
   phone?: string;
   ticketsRaised?: number;
   profile?: {
@@ -45,6 +47,8 @@ export const mapLandlordToUserProfile = (user: User): UserProfile => ({
   systemId: user.systemId || '4',
   status: user.status || ((user as any).isSuspended ? 'Suspended' : user.isVerified ? 'Active' : 'Pending Invite'),
   lastActive: user.lastActive || 'Invitation sent',
+  presence: user.presence,
+  lastSeenAt: user.lastSeenAt,
   phone: user.phone || user.profile?.phoneNumber || '',
   ticketsRaised: user.ticketsRaised || 0,
 });
