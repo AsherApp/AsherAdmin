@@ -51,7 +51,20 @@ export const deleteLandlordAccount = async (userId: string): Promise<{
   success: boolean;
   message: string;
 }> => {
-  return api.delete(`/admin/landlords/${userId}`);
+  try {
+    return await api.delete(`/admin/users/${userId}`);
+  } catch (err: any) {
+    const status = String(err?.message || err?.status || '');
+    if (
+      status.includes('404') ||
+      status.toLowerCase().includes('not found') ||
+      status.toLowerCase().includes('cannot get') ||
+      status.toLowerCase().includes('cannot delete')
+    ) {
+      return api.delete(`/admin/landlords/${userId}`);
+    }
+    throw err;
+  }
 };
 
 export const setLandlordTempPassword = async (

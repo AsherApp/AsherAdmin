@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Loader, X, ExternalLink } from 'lucide-react';
+import { Search, Loader, X, ExternalLink, Trash2 } from 'lucide-react';
 import UserTable from './users/UserTable';
 import { getAllVendors, VendorUserProfile } from '../services/vendorService';
+import { deleteLandlordAccount } from '../services/userService';
 
 // Parallel to UserManagement.tsx's landlord listing, for the Vendor app
 // (Part 1 of VENDOR_APP_FLOW_SPEC.md). Reuses the existing UserTable
@@ -12,6 +13,9 @@ const VendorManagement: React.FC = () => {
   const [selectedVendor, setSelectedVendor] = useState<VendorUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     loadVendors();
@@ -79,7 +83,11 @@ const VendorManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative">
             <button
-              onClick={() => setSelectedVendor(null)}
+              onClick={() => {
+                setSelectedVendor(null);
+                setConfirmDelete(false);
+                setDeleteError('');
+              }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
             >
               <X size={20} />
@@ -118,6 +126,39 @@ const VendorManagement: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {deleteError && (
+              <p className="mt-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{deleteError}</p>
+            )}
+
+            <button
+              onClick={async () => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  setDeleteError('Click delete again to permanently remove this vendor.');
+                  return;
+                }
+                setDeleting(true);
+                setDeleteError('');
+                try {
+                  await deleteLandlordAccount(selectedVendor.id);
+                  setVendors((current) => current.filter((v) => v.id !== selectedVendor.id));
+                  setTotal((current) => Math.max(0, current - 1));
+                  setSelectedVendor(null);
+                  setConfirmDelete(false);
+                } catch (err: any) {
+                  setDeleteError(err?.message || 'Failed to delete vendor');
+                  setConfirmDelete(false);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              disabled={deleting}
+              className="mt-6 w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {deleting ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              {confirmDelete ? 'Click again to confirm delete' : 'Delete vendor'}
+            </button>
           </div>
         </div>
       )}

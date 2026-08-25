@@ -47,6 +47,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const [inviteError, setInviteError] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isPendingInvite = user.status === 'Pending Invite';
 
@@ -190,11 +191,9 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   };
 
   const handleDeleteAccount = async () => {
-    if (
-      !window.confirm(
-        `Permanently remove ${user.name}'s account (${user.email}) from the system?\n\nThis will:\n• Remove them from the admin directory\n• Deactivate their properties and tenants\n• Block all future sign-in\n\nThis cannot be undone.`
-      )
-    ) {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      setInviteError('Click Delete again to permanently remove this account.');
       return;
     }
 
@@ -206,8 +205,13 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
       onDelete();
       onClose();
     } catch (err: any) {
-      setInviteError(err.message || 'Failed to delete account');
+      const message =
+        err?.message ||
+        err?.errors?.[0] ||
+        'Failed to delete account. If this keeps happening, sign out of Admin and try again.';
+      setInviteError(message);
       setInviteLoading(null);
+      setConfirmDelete(false);
     }
   };
 
@@ -306,7 +310,6 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                  </button>
                )}
                {!isPendingInvite && (
-                 <>
                    <button
                      onClick={handleToggleSuspension}
                      disabled={inviteLoading !== null}
@@ -315,16 +318,15 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                      {inviteLoading === 'suspend' ? <Loader className="animate-spin" size={16} /> : <Shield size={16} />}
                      {user.status === 'Suspended' ? 'Reinstate account' : 'Suspend account'}
                    </button>
-                   <button
-                     onClick={handleDeleteAccount}
-                     disabled={inviteLoading !== null}
-                     className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
-                   >
-                     {inviteLoading === 'delete' ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                     Delete account
-                   </button>
-                 </>
                )}
+               <button
+                 onClick={handleDeleteAccount}
+                 disabled={inviteLoading !== null}
+                 className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+               >
+                 {inviteLoading === 'delete' ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                 {confirmDelete ? 'Click again to confirm delete' : 'Delete account'}
+               </button>
                {inviteError && (
                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{inviteError}</p>
                )}
@@ -607,12 +609,12 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                          </div>
                          )}
 
-                         {!isPendingInvite && (
+                         {(
                            <div className="flex items-center justify-between p-4 border border-red-200/50 rounded-xl bg-white/30 hover:bg-white/50 transition backdrop-blur-sm shadow-sm">
                              <div>
                                <p className="text-sm font-bold text-red-800">Delete Account</p>
                                <p className="text-xs text-gray-500 mt-1">
-                                 Permanently remove this landlord from the system, including deactivating their properties and tenants.
+                                 Permanently remove this user from the system. Properties and tenants are deactivated when present.
                                </p>
                              </div>
                              <button
@@ -621,7 +623,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                                className="px-4 py-2 rounded-lg text-xs font-bold border border-red-300 text-red-700 hover:bg-red-50 bg-white/50 flex items-center gap-2 disabled:opacity-50"
                              >
                                {inviteLoading === 'delete' ? <Loader className="animate-spin" size={14} /> : <Trash2 size={14} />}
-                               Delete
+                               {confirmDelete ? 'Confirm delete' : 'Delete'}
                              </button>
                            </div>
                          )}
