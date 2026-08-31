@@ -8,7 +8,7 @@ export interface PendingIdentityVerification {
   businessName: string | null;
   documentUrls: string[];
   submittedAt: string | null;
-  /** 'stripe' = UK landlord — Stripe Connect KYC clears this automatically; admin is view-only. */
+  /** 'stripe' = UK — Approve after Stripe READY; 'admin' = non-UK admin path. */
   verifiedVia: 'stripe' | 'admin';
   stripeDetailsSubmitted: boolean;
   stripePayoutsEnabled: boolean;

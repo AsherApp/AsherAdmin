@@ -7,6 +7,10 @@ import {
   rejectLandlordIdentity,
 } from '../services/identityVerificationService';
 
+function stripeReady(item: PendingIdentityVerification) {
+  return Boolean(item.stripeDetailsSubmitted && item.stripePayoutsEnabled);
+}
+
 const IdentityVerificationReview: React.FC = () => {
   const [items, setItems] = useState<PendingIdentityVerification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,8 +77,8 @@ const IdentityVerificationReview: React.FC = () => {
             Identity Verification
           </h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Review landlord ID uploads before leasing and application features unlock.
-            UK landlords are cleared automatically by Stripe Connect's own KYC — those rows are view-only.
+            Review landlord ID uploads. Non-UK: Approve when documents look right.
+            UK: Stripe payouts-ready completes verification and emails the landlord — Refresh syncs.
           </p>
         </div>
         <button
@@ -104,50 +108,68 @@ const IdentityVerificationReview: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.landlordId}
-              className="glass-panel p-5 rounded-2xl border border-white/50 flex flex-col lg:flex-row lg:items-center gap-4"
-            >
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900">{item.name}</h3>
-                <p className="text-sm text-gray-600">{item.email}</p>
-                {item.businessName && (
-                  <p className="text-xs text-gray-500 mt-1">{item.businessName}</p>
-                )}
-                {item.submittedAt && (
-                  <p className="text-xs text-gray-400 mt-2">
-                    Submitted {new Date(item.submittedAt).toLocaleString()}
-                  </p>
-                )}
-                {item.verifiedVia === 'stripe' && (
-                  <p className="text-xs text-blue-600 font-bold mt-1">
-                    UK landlord — cleared by Stripe, not admin
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {item.documentUrls.map((url, index) => (
-                    <a
-                      key={`${item.landlordId}-${index}`}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg"
-                    >
-                      Document {index + 1}
-                      <ExternalLink size={12} />
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                {item.verifiedVia === 'stripe' ? (
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-700 text-sm font-bold border border-blue-100">
-                    <Clock size={16} />
-                    {item.stripeDetailsSubmitted ? 'Verifying with Stripe' : 'Awaiting Stripe onboarding'}
+          {items.map((item) => {
+            const uk = item.verifiedVia === 'stripe';
+            const canApprove = !uk || stripeReady(item);
+            return (
+              <div
+                key={item.landlordId}
+                className="glass-panel p-5 rounded-2xl border border-white/50 flex flex-col lg:flex-row lg:items-center gap-4"
+              >
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-900">{item.name}</h3>
+                  <p className="text-sm text-gray-600">{item.email}</p>
+                  {item.businessName && (
+                    <p className="text-xs text-gray-500 mt-1">{item.businessName}</p>
+                  )}
+                  {item.submittedAt && (
+                    <p className="text-xs text-gray-400 mt-2">
+                      Submitted {new Date(item.submittedAt).toLocaleString()}
+                    </p>
+                  )}
+                  {uk ? (
+                    <p className="text-xs font-bold mt-2">
+                      {stripeReady(item) ? (
+                        <span className="text-green-700">
+                          Stripe: payouts ready — you can Approve
+                        </span>
+                      ) : item.stripeDetailsSubmitted ? (
+                        <span className="text-amber-700">
+                          Stripe: verifying — Approve unlocks when payouts are enabled
+                        </span>
+                      ) : (
+                        <span className="text-blue-700">
+                          Stripe: awaiting Connect / bank setup
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 font-medium mt-1">
+                      Non-UK — admin review path
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {item.documentUrls.map((url, index) => (
+                      <a
+                        key={`${item.landlordId}-${index}`}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg"
+                      >
+                        Document {index + 1}
+                        <ExternalLink size={12} />
+                      </a>
+                    ))}
                   </div>
-                ) : (
-                  <>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  {!canApprove ? (
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold border border-amber-100">
+                      <Clock size={16} />
+                      Waiting on Stripe
+                    </div>
+                  ) : (
                     <button
                       onClick={() => void handleApprove(item.landlordId)}
                       disabled={actionId === item.landlordId}
@@ -160,19 +182,19 @@ const IdentityVerificationReview: React.FC = () => {
                       )}
                       Approve
                     </button>
-                    <button
-                      onClick={() => void handleReject(item.landlordId)}
-                      disabled={actionId === item.landlordId}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold disabled:opacity-50"
-                    >
-                      <X size={16} />
-                      Reject
-                    </button>
-                  </>
-                )}
+                  )}
+                  <button
+                    onClick={() => void handleReject(item.landlordId)}
+                    disabled={actionId === item.landlordId}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-bold disabled:opacity-50"
+                  >
+                    <X size={16} />
+                    Reject
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
