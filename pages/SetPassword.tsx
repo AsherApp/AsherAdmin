@@ -1,7 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Lock, Loader, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import api from '../config/api';
+
+type LandlordInviteStatus =
+  | 'pending'
+  | 'already_registered'
+  | 'used'
+  | 'expired'
+  | 'invalid';
 
 const SetPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -16,8 +23,46 @@ const SetPassword: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<LandlordInviteStatus | 'checking'>('checking');
+  const [inviteMessage, setInviteMessage] = useState('');
 
   const missingParams = useMemo(() => !token || !email, [token, email]);
+
+  useEffect(() => {
+    if (missingParams) {
+      setInviteStatus('invalid');
+      return;
+    }
+
+    let cancelled = false;
+    setInviteStatus('checking');
+
+    void (async () => {
+      try {
+        const response = await api.get(
+          `/admin/landlord-invitation-status?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email.trim().toLowerCase())}`
+        );
+        const status = (response?.data?.status || response?.status) as LandlordInviteStatus | undefined;
+        if (!cancelled) {
+          setInviteStatus(status || 'pending');
+          setInviteMessage(response?.data?.message || response?.message || '');
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        const message = String(err?.message || '');
+        if (message.includes('status: 404')) {
+          setInviteStatus('pending');
+          return;
+        }
+        setInviteStatus('invalid');
+        setInviteMessage(message || 'Could not check this invitation.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [missingParams, token, email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,12 +110,31 @@ const SetPassword: React.FC = () => {
             <p className="text-gray-600 text-sm">Complete your Asher landlord account setup</p>
           </div>
 
-          {missingParams && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-              <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
-              <p className="text-sm text-red-700">
-                This invitation link is invalid or incomplete. Please use the link from your email.
-              </p>
+          {(missingParams || (inviteStatus !== 'pending' && inviteStatus !== 'checking' && !success)) && (
+            <div className="mb-6 space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+                <AlertCircle size={20} className="text-red-600 flex-shrink-0" />
+                <p className="text-sm text-red-700">
+                  {inviteMessage ||
+                    'This invitation link is invalid, expired, or has already been used. Sign in if you already have an account, or ask your admin for a new invite.'}
+                </p>
+              </div>
+              {(inviteStatus === 'already_registered' || inviteStatus === 'used') && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200"
+                >
+                  Go to login
+                </button>
+              )}
+            </div>
+          )}
+
+          {inviteStatus === 'checking' && !missingParams && (
+            <div className="mb-6 flex items-center justify-center gap-2 text-gray-600">
+              <Loader className="animate-spin" size={20} />
+              <p className="text-sm">Checking invitation…</p>
             </div>
           )}
 
@@ -88,7 +152,7 @@ const SetPassword: React.FC = () => {
             </div>
           )}
 
-          {!missingParams && !success && (
+          {!missingParams && !success && inviteStatus === 'pending' && (
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
