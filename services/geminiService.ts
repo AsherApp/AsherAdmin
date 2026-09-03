@@ -1,6 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { Ticket, ChatThread } from "../types";
 
+const GEMINI_MODEL = "gemini-3.6-flash";
+
 const getApiKey = (): string | undefined => {
   const key = process.env.GEMINI_API_KEY || process.env.API_KEY;
   return key?.trim() || undefined;
@@ -44,7 +46,7 @@ export const analyzeTicketWithAI = async (ticket: Ticket): Promise<{ summary: st
     `;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: { responseMimeType: "application/json" }
     });
@@ -76,7 +78,7 @@ export const generateSmartReplies = async (thread: ChatThread): Promise<string[]
     `;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
       config: { responseMimeType: "application/json" }
     });
@@ -106,7 +108,7 @@ export const generateEmailDraft = async (subject: string, recipientRole: string)
     `;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
     });
     return response.text || "";
@@ -134,7 +136,7 @@ export const generateDocumentTemplate = async (title: string, type: string): Pro
     `;
 
     const response = await client.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: GEMINI_MODEL,
       contents: prompt,
     });
     return response.text || "";
