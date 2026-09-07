@@ -77,8 +77,8 @@ const IdentityVerificationReview: React.FC = () => {
             Identity Verification
           </h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Review landlord ID uploads. Non-UK: Approve when documents look right.
-            UK: Stripe payouts-ready completes verification and emails the landlord — Refresh syncs.
+            Review landlord ID uploads. Nigeria: Approve when documents look right —
+            that unlocks leasing. UK: Stripe payouts must be ready before Approve.
           </p>
         </div>
         <button
@@ -145,7 +145,7 @@ const IdentityVerificationReview: React.FC = () => {
                     </p>
                   ) : (
                     <p className="text-xs text-gray-500 font-medium mt-1">
-                      Non-UK — admin review path
+                      Nigeria / other — Asher reviews the ID. Approve unlocks leasing.
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2 mt-3">
