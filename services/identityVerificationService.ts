@@ -7,6 +7,7 @@ export interface PendingIdentityVerification {
   email: string;
   businessName: string | null;
   documentUrls: string[];
+  livenessUrls?: string[];
   submittedAt: string | null;
   /** 'stripe' = UK — Approve after Stripe READY; 'admin' = non-UK admin path. */
   verifiedVia: 'stripe' | 'admin';

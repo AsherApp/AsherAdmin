@@ -149,6 +149,18 @@ const IdentityVerificationReview: React.FC = () => {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2 mt-3">
+                    {item.livenessUrls?.map((url, index) => (
+                      <a
+                        key={`${item.landlordId}-selfie-${index}`}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 px-2 py-1 rounded-lg"
+                      >
+                        Live selfie
+                        <ExternalLink size={12} />
+                      </a>
+                    ))}
                     {item.documentUrls.map((url, index) => (
                       <a
                         key={`${item.landlordId}-${index}`}
