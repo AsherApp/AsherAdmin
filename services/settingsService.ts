@@ -3,6 +3,8 @@ import api from '../config/api';
 export type AdminProfile = {
   firstName?: string | null; lastName?: string | null; fullname?: string | null;
   title?: string | null; profileUrl?: string | null;
+  address?: string | null; city?: string | null; state?: string | null;
+  zip?: string | null; country?: string | null;
   users?: { email?: string }; user?: { email?: string };
 };
 export type NotificationPreference = {
@@ -13,7 +15,7 @@ export type NotificationPreference = {
 const unwrap = (value: any): any => value?.data?.data ?? value?.data ?? value;
 
 export const getMyProfile = async (): Promise<AdminProfile> => unwrap(await api.get('/profile'));
-export const updateMyProfile = async (data: Pick<AdminProfile, 'firstName' | 'lastName' | 'title'>): Promise<AdminProfile> => {
+export const updateMyProfile = async (data: Pick<AdminProfile, 'firstName' | 'lastName' | 'title' | 'address' | 'city' | 'state' | 'zip' | 'country'>): Promise<AdminProfile> => {
   const form = new FormData();
   Object.entries(data).forEach(([key, value]) => { if (typeof value === 'string') form.append(key, value); });
   return unwrap(await api.postFormData('/profile/update', form));
