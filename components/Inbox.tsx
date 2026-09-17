@@ -4,6 +4,7 @@ import { Search, Send, Paperclip, Monitor, Wand2, Loader } from 'lucide-react';
 import { generateSmartReplies } from '../services/geminiService';
 import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRoom, ChatMessage as ApiChatMessage } from '../services/chatService';
 import { getCurrentUser } from '../services/authService';
+import { CompressedFileInput } from './upload/CompressedFileInput';
 
 const Inbox: React.FC = () => {
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -290,7 +291,12 @@ const Inbox: React.FC = () => {
               )}
 
               <div className="flex items-center gap-3">
-                <input ref={attachmentRef} type="file" className="hidden" onChange={(e) => void handleAttachment(e.target.files?.[0])} />
+                <CompressedFileInput
+                  ref={attachmentRef}
+                  className='hidden'
+                  onFile={file => void handleAttachment(file ?? undefined)}
+                  onError={message => setError(message)}
+                />
                 <button onClick={() => attachmentRef.current?.click()} disabled={sending} aria-label="Attach file" className="p-3 text-gray-500 hover:text-red-600 hover:bg-white/50 rounded-xl transition disabled:opacity-50"><Paperclip size={20} /></button>
                 <div className="flex-1 relative">
                    <input 
