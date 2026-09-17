@@ -1,4 +1,5 @@
 import api from '../config/api';
+import { prepareUploadFile, prepareUploadFiles } from '../lib/clientUpload/prepareUploadFile';
 
 export interface FileUploadResponse {
   url: string;
@@ -26,8 +27,9 @@ export interface Document {
  * Backend endpoint: POST /api/file-uploads
  */
 export const uploadFile = async (file: File): Promise<FileUploadResponse> => {
+  const prepared = await prepareUploadFile(file);
   const formData = new FormData();
-  formData.append('files', file);
+  formData.append('files', prepared);
 
   const response = await api.postFormData('/file-uploads', formData);
   return response.data || response;
@@ -38,8 +40,9 @@ export const uploadFile = async (file: File): Promise<FileUploadResponse> => {
  * Backend endpoint: POST /api/file-uploads
  */
 export const uploadFiles = async (files: File[]): Promise<FileUploadResponse[]> => {
+  const prepared = await prepareUploadFiles(files);
   const formData = new FormData();
-  files.forEach((file) => {
+  prepared.forEach((file) => {
     formData.append('files', file);
   });
 
@@ -67,8 +70,9 @@ export const uploadDocument = async (
   systemId?: string,
   isPublished?: boolean
 ): Promise<Document> => {
+  const prepared = await prepareUploadFile(file);
   const formData = new FormData();
-  formData.append('files', file);
+  formData.append('files', prepared);
   formData.append('documentName', documentName);
   // Always use 'OTHER' for admin library documents
   // Category is preserved in document name (e.g., [FAQ] Document Name)
@@ -101,9 +105,10 @@ export const uploadDocuments = async (
   const results: Document[] = [];
   
   for (let i = 0; i < files.length; i++) {
+    const prepared = await prepareUploadFile(files[i]);
     const formData = new FormData();
-    formData.append('files', files[i]);
-    formData.append('documentName', documentNames[i] || files[i].name);
+    formData.append('files', prepared);
+    formData.append('documentName', documentNames[i] || prepared.name);
     
     if (docTypes && docTypes[i]) {
       formData.append('docType', docTypes[i]);
@@ -145,8 +150,9 @@ export const uploadPropertyDocument = async (
   file: File,
   documentName?: string
 ): Promise<any> => {
+  const prepared = await prepareUploadFile(file);
   const formData = new FormData();
-  formData.append('files', file);
+  formData.append('files', prepared);
   if (documentName) {
     formData.append('documentName', documentName);
   }
