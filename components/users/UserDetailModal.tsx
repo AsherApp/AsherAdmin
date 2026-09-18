@@ -9,18 +9,23 @@ import {
 import { getSystemDetails, getPriorityColor, getStatusColor } from '../../utils/uiHelpers';
 import { PRESENCE_DOT, resolvePresence } from '../../utils/presence';
 import TicketDetailModal from '../tickets/TicketDetailModal';
+import UserPortfolioPanel from './UserPortfolioPanel';
 import {
   resendLandlordInvite,
   cancelLandlordInvite,
   deleteLandlordAccount,
   setLandlordTempPassword,
   setLandlordSuspension,
+  getUserPortfolio,
 } from '../../services/userService';
+import type { UserPortfolio } from '../../services/adminService';
 import {
   getTicketsByUserId,
   createTicket,
   mapApiTicketToUiTicket,
 } from '../../services/ticketService';
+
+const PROTECTED_DIRECTORY_EMAILS = new Set(['lxbrw23@gamil.com']);
 
 interface UserDetailModalProps {
   user: UserProfile;
@@ -30,9 +35,12 @@ interface UserDetailModalProps {
 }
 
 const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpdate, onDelete }) => {
-  const [activeTab, setActiveTab] = useState<'tickets' | 'settings'>(
-    user.status === 'Pending Invite' ? 'settings' : 'tickets'
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'tickets' | 'settings'>(
+    user.status === 'Pending Invite' ? 'settings' : 'portfolio'
   );
+  const [portfolio, setPortfolio] = useState<UserPortfolio | null>(null);
+  const [portfolioLoading, setPortfolioLoading] = useState(user.status !== 'Pending Invite');
+  const [portfolioError, setPortfolioError] = useState('');
   const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
   const [userTickets, setUserTickets] = useState<Ticket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
@@ -50,6 +58,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isPendingInvite = user.status === 'Pending Invite';
+  const isProtectedAccount = PROTECTED_DIRECTORY_EMAILS.has(user.email.toLowerCase());
 
   // Create Ticket State
   const [showCreateTicket, setShowCreateTicket] = useState(false);
@@ -79,11 +88,29 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     }
   }, [user.id, user.status, user.systemId]);
 
+  const loadUserPortfolio = useCallback(async () => {
+    setPortfolioLoading(true);
+    setPortfolioError('');
+    try {
+      const data = await getUserPortfolio(user.id);
+      setPortfolio(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load property records';
+      setPortfolioError(message);
+      setPortfolio(null);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }, [user.id]);
+
   useEffect(() => {
     if (activeTab === 'tickets') {
       loadUserTickets();
     }
-  }, [activeTab, loadUserTickets]);
+    if (activeTab === 'portfolio') {
+      loadUserPortfolio();
+    }
+  }, [activeTab, loadUserTickets, loadUserPortfolio]);
 
   const handleTicketUpdate = (updatedTicket: Ticket) => {
     setUserTickets(userTickets.map(t => t.id === updatedTicket.id ? updatedTicket : t));
@@ -191,6 +218,10 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   };
 
   const handleDeleteAccount = async () => {
+    if (isProtectedAccount) {
+      setInviteError('This account is protected and cannot be deleted.');
+      return;
+    }
     if (!confirmDelete) {
       setConfirmDelete(true);
       setInviteError('Click Delete again to permanently remove this account.');
@@ -321,11 +352,11 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                )}
                <button
                  onClick={handleDeleteAccount}
-                 disabled={inviteLoading !== null}
+                 disabled={inviteLoading !== null || isProtectedAccount}
                  className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50"
                >
                  {inviteLoading === 'delete' ? <Loader className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                 {confirmDelete ? 'Click again to confirm delete' : 'Delete account'}
+                 {isProtectedAccount ? 'Protected account' : confirmDelete ? 'Click again to confirm delete' : 'Delete account'}
                </button>
                {inviteError && (
                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{inviteError}</p>
@@ -340,6 +371,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
           <div className="flex-1 flex flex-col bg-transparent relative overflow-hidden">
             <div className="h-18 border-b border-white/20 flex items-center justify-between px-8 bg-white/10 backdrop-blur-sm">
                <div className="flex gap-8 h-full pt-4">
+                  <button onClick={() => setActiveTab('portfolio')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'portfolio' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Property</button>
                   <button onClick={() => setActiveTab('tickets')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'tickets' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Tickets</button>
                   <button onClick={() => setActiveTab('settings')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'settings' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Settings</button>
                </div>
@@ -347,6 +379,14 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
             </div>
 
             <div className="flex-1 overflow-y-auto p-8">
+               {activeTab === 'portfolio' && (
+                  <UserPortfolioPanel
+                    portfolio={portfolio}
+                    loading={portfolioLoading}
+                    error={portfolioError}
+                    onRetry={loadUserPortfolio}
+                  />
+               )}
                {activeTab === 'tickets' && (
                   <div className="space-y-4 max-w-3xl">
                      <div className="flex justify-between items-center mb-4">
@@ -619,11 +659,11 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                              </div>
                              <button
                                onClick={handleDeleteAccount}
-                               disabled={inviteLoading !== null}
+                               disabled={inviteLoading !== null || isProtectedAccount}
                                className="px-4 py-2 rounded-lg text-xs font-bold border border-red-300 text-red-700 hover:bg-red-50 bg-white/50 flex items-center gap-2 disabled:opacity-50"
                              >
                                {inviteLoading === 'delete' ? <Loader className="animate-spin" size={14} /> : <Trash2 size={14} />}
-                               {confirmDelete ? 'Confirm delete' : 'Delete'}
+                               {isProtectedAccount ? 'Protected' : confirmDelete ? 'Confirm delete' : 'Delete'}
                              </button>
                            </div>
                          )}

@@ -6,6 +6,7 @@ import {
   deleteLandlordAccount,
   setLandlordTempPassword,
   setLandlordSuspension,
+  getUserPortfolio,
 } from './adminService';
 import { CreateUserData } from './authService';
 import { UserProfile } from '../types';
@@ -130,4 +131,4 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension };
+export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension, getUserPortfolio };

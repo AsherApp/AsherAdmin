@@ -7,6 +7,22 @@ import {
   rejectLandlordIdentity,
 } from '../services/identityVerificationService';
 
+function faceMatchCopy(
+  match?: {
+    matchScore: number;
+    isMatch: boolean;
+    reasoning?: string;
+  } | null
+) {
+  if (!match || typeof match.matchScore !== 'number') {
+    return 'Face match has not finished yet.';
+  }
+  const samePerson = match.isMatch && match.matchScore >= 70;
+  const verdict = samePerson ? 'Looks like the same person' : 'Reviewer should look';
+  const reason = match.reasoning ? ` — ${match.reasoning}` : '';
+  return `${verdict} · ${Math.round(match.matchScore)}%${reason}`;
+}
+
 function stripeReady(item: PendingIdentityVerification) {
   return Boolean(item.stripeDetailsSubmitted && item.stripePayoutsEnabled);
 }
@@ -148,17 +164,24 @@ const IdentityVerificationReview: React.FC = () => {
                       Nigeria / other — Asher reviews the ID. Approve unlocks leasing.
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-3 mt-3">
                     {item.livenessUrls?.map((url, index) => (
                       <a
                         key={`${item.landlordId}-selfie-${index}`}
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 px-2 py-1 rounded-lg"
+                        className="block"
                       >
-                        Live selfie
-                        <ExternalLink size={12} />
+                        <img
+                          src={url}
+                          alt={`Selfie ${index + 1}`}
+                          className="h-24 w-20 rounded-lg object-cover border border-emerald-100"
+                        />
+                        <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                          Selfie
+                          <ExternalLink size={12} />
+                        </span>
                       </a>
                     ))}
                     {item.documentUrls.map((url, index) => (
@@ -167,13 +190,16 @@ const IdentityVerificationReview: React.FC = () => {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg h-fit"
                       >
                         Document {index + 1}
                         <ExternalLink size={12} />
                       </a>
                     ))}
                   </div>
+                  <p className="text-xs text-gray-600 mt-2 font-medium">
+                    {faceMatchCopy(item.faceMatch)}
+                  </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   {!canApprove ? (

@@ -86,6 +86,12 @@ export interface PendingVendorVerification {
   businessName: string | null;
   businessRegistrationNumber: string | null;
   documents: VendorDocument[];
+  identityFaceMatch?: {
+    matchScore: number;
+    isMatch: boolean;
+    reasoning?: string;
+    checkedAt?: string;
+  } | null;
   submittedAt: string | null;
   payout?: {
     provider: 'STRIPE' | 'PAYSTACK' | 'NONE';

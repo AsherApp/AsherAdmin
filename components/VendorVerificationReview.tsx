@@ -7,9 +7,28 @@ import {
   rejectVendorVerification,
 } from '../services/vendorService';
 
-// Mirrors IdentityVerificationReview.tsx (landlord identity review) for
-// vendor onboarding (Part 1 of VENDOR_APP_FLOW_SPEC.md) - a vendor cannot
+// Mirrors IdentityVerificationReview.tsx for vendor onboarding. A vendor cannot
 // access the Vendor app dashboard until reviewed here.
+
+function faceMatchCopy(
+  match?: {
+    matchScore: number;
+    isMatch: boolean;
+    reasoning?: string;
+  } | null
+) {
+  if (!match || typeof match.matchScore !== 'number') {
+    return 'Face match has not finished yet.';
+  }
+  const samePerson = match.isMatch && match.matchScore >= 70;
+  const verdict = samePerson ? 'Looks like the same person' : 'Reviewer should look';
+  const reason = match.reasoning ? ` — ${match.reasoning}` : '';
+  return `${verdict} · ${Math.round(match.matchScore)}%${reason}`;
+}
+
+function selfieDoc(doc: { type: string; url: string }) {
+  return /SELFIE/i.test(doc.type);
+}
 const VendorVerificationReview: React.FC = () => {
   const [items, setItems] = useState<PendingVendorVerification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,23 +152,46 @@ const VendorVerificationReview: React.FC = () => {
                     Updated {new Date(item.submittedAt).toLocaleString()}
                   </p>
                 )}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {item.documents.map((doc) => (
-                    <a
-                      key={doc.id}
-                      href={doc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg"
-                    >
-                      {doc.type}
-                      <ExternalLink size={12} />
-                    </a>
-                  ))}
+                <div className="flex flex-wrap gap-3 mt-3">
+                  {item.documents.map((doc) =>
+                    selfieDoc(doc) ? (
+                      <a
+                        key={doc.id}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <img
+                          src={doc.url}
+                          alt={doc.type}
+                          className="h-24 w-20 rounded-lg object-cover border border-emerald-100"
+                        />
+                        <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                          Selfie
+                          <ExternalLink size={12} />
+                        </span>
+                      </a>
+                    ) : (
+                      <a
+                        key={doc.id}
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg h-fit"
+                      >
+                        {doc.type === 'SELFIE_LIVENESS' ? 'Selfie' : doc.type}
+                        <ExternalLink size={12} />
+                      </a>
+                    )
+                  )}
                   {item.documents.length === 0 && (
                     <span className="text-xs text-gray-400">No documents submitted</span>
                   )}
                 </div>
+                <p className="text-xs text-gray-600 mt-2 font-medium">
+                  {faceMatchCopy(item.identityFaceMatch)}
+                </p>
                 {item.payout && item.payout.status !== 'N/A' ? (
                   <div className="mt-3 rounded-xl border border-gray-100 bg-white/60 px-3 py-2">
                     <div className="flex flex-wrap items-center gap-2">
