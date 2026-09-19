@@ -42,7 +42,7 @@ export interface User {
 
 export const mapLandlordToUserProfile = (user: User): UserProfile => ({
   id: user.id,
-  name: user.name || user.email.split('@')[0],
+  name: user.name || 'Landlord',
   email: user.email,
   role: typeof user.role === 'string' ? user.role : 'Landlord',
   systemId: user.systemId || '4',

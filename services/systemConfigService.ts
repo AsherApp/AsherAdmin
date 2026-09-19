@@ -11,14 +11,15 @@ export type ListingMonetizationConfig = {
     EUR: { listFee: number; premiumFee: number; relocatePostFee: number };
   };
   ads?: {
-    durationIncreasePercent: number;
-    locationIncreasePercent: number;
-    bannerPremiumPercent: number;
-    base: {
-      GBP: number;
-      NGN: number;
-      USD: number;
-      EUR: number;
+    /** What a BUSINESS listing costs. ITEM listings are free. */
+    base: { GBP: number; NGN: number; USD: number; EUR: number };
+    /** Flat total for a premium listing, whichever type it is. */
+    premium: { GBP: number; NGN: number; USD: number; EUR: number };
+    listingDays: number;
+    /** Taken when a seller marks an item sold — how free listings pay. */
+    saleCommission: {
+      percent: number;
+      max: { GBP: number; NGN: number; USD: number; EUR: number };
     };
   };
   storage?: {
@@ -31,6 +32,14 @@ export type ListingMonetizationConfig = {
 };
 
 export type ListingMonetizationUpdate = {
+  adPremiumGbp?: number;
+  adPremiumNgn?: number;
+  adPremiumUsd?: number;
+  adPremiumEur?: number;
+  adListingDays?: number;
+  adSaleCommissionPercent?: number;
+  adSaleCommissionMaxGbp?: number;
+  adSaleCommissionMaxNgn?: number;
   freePerMonth?: number;
   premiumDays?: number;
   listFeeGbp?: number;

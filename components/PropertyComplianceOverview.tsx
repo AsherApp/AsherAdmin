@@ -101,7 +101,7 @@ const PropertyComplianceOverview: React.FC = () => {
                   <p className="font-medium text-gray-900">{row.propertyName}</p>
                   <p className="text-xs text-gray-500">{row.specificationType}</p>
                 </td>
-                <td className="p-4 text-gray-600">{row.landlordEmail || row.landlordName || '—'}</td>
+                <td className="p-4 text-gray-600">{row.landlordName || '—'}</td>
                 <td className="p-4 text-gray-600">{row.country}</td>
                 <td className="p-4">
                   <span

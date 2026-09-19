@@ -39,7 +39,7 @@ export interface VendorUserProfile extends UserProfile {
 
 export const mapVendorToProfile = (vendor: Vendor): VendorUserProfile => ({
   id: vendor.id,
-  name: vendor.name || vendor.email.split('@')[0],
+  name: vendor.name || vendor.businessName || 'Vendor',
   email: vendor.email,
   role: 'Vendor',
   systemId: vendor.systemId || '2',
