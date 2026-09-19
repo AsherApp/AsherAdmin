@@ -28,8 +28,10 @@ export type ModerationPage = { items: ModeratedAd[]; total: number };
 export const getAdsForModeration = async (
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL' = 'PENDING'
 ): Promise<ModerationPage> => {
-  const response = await api.get('/admin/ads/moderation', { params: { status } });
-  const payload = response.data?.data ?? response.data;
+  const response = await api.get(
+    `/admin/ads/moderation?status=${encodeURIComponent(status)}`
+  );
+  const payload = response?.data ?? response;
   return { items: payload?.items ?? [], total: payload?.total ?? 0 };
 };
 
@@ -39,5 +41,5 @@ export const reviewAd = async (
   reason?: string
 ) => {
   const response = await api.patch(`/admin/ads/${adId}/review`, { decision, reason });
-  return response.data?.data ?? response.data;
+  return response?.data ?? response;
 };

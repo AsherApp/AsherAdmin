@@ -20,6 +20,7 @@ const FileLibrary = lazy(() => import('./components/FileLibrary'));
 const LandlordsSection = lazy(() => import('./components/LandlordsSection'));
 const VendorsSection = lazy(() => import('./components/VendorsSection'));
 const ListingMonetizationConfig = lazy(() => import('./components/ListingMonetizationConfig'));
+const AdModerationReview = lazy(() => import('./components/AdModerationReview'));
 const PlatformFinance = lazy(() => import('./components/PlatformFinance'));
 const FinancialReports = lazy(() => import('./components/FinancialReports'));
 const PropertyComplianceOverview = lazy(() => import('./components/PropertyComplianceOverview'));
@@ -199,6 +200,7 @@ const DashboardLayout: React.FC = () => {
       case 'landlords': return <LandlordsSection />;
       case 'vendors': return <VendorsSection />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
+      case 'ad-moderation': return <AdModerationReview />;
       case 'finance': return <PlatformFinance />;
       case 'financial-reports': return <FinancialReports />;
       case 'compliance': return <PropertyComplianceOverview />;

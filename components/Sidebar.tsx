@@ -19,6 +19,7 @@ import {
   Coins,
   Wallet,
   BarChart3,
+  Store,
 } from 'lucide-react';
 import { logout } from '../services/authService';
 
@@ -35,6 +36,7 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'landlords', label: 'Landlords', icon: Users },
   { id: 'vendors', label: 'Vendors', icon: Wrench },
   { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
+  { id: 'ad-moderation', label: 'Marketplace', icon: Store },
   { id: 'finance', label: 'Platform Finance', icon: Wallet },
   { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
   { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
