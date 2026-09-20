@@ -106,7 +106,7 @@ export function Avatar({
   return (
     <span className={`relative inline-flex shrink-0 ${className}`}>
       <span
-        className={`${spec.box} overflow-hidden rounded-full ${ring ? 'ring-2 ring-white' : ''}`}
+        className={`${spec.box} overflow-hidden rounded-full bg-red-50 ${ring ? 'ring-2 ring-white' : ''}`}
         role="img"
         aria-label={`${label}${status ? `, ${status}` : ''}`}
       >
@@ -121,7 +121,7 @@ export function Avatar({
           <PresetFace preset={preset} />
         ) : (
           <span
-            className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-red-500 to-red-700 font-bold text-white ${spec.text}`}
+            className={`flex h-full w-full items-center justify-center bg-red-600 font-bold text-white ${spec.text}`}
           >
             {initialsFromName(label)}
           </span>
