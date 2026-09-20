@@ -11,6 +11,7 @@ import {
   connectAdminNotifications,
   disconnectAdminNotifications,
   subscribeAdminLiveNotifications,
+  pollWhileDisconnected,
 } from './services/notificationSocket';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -113,9 +114,9 @@ const DashboardLayout: React.FC = () => {
   // Load notifications on mount, poll as fallback, and live socket updates
   useEffect(() => {
     void loadNotifications();
-    const interval = setInterval(() => {
+    const stopPoll = pollWhileDisconnected(() => {
       void loadNotifications({ silent: true });
-    }, 30000);
+    });
 
     const user = getCurrentUser();
     const token = localStorage.getItem('admin_token');
@@ -145,7 +146,7 @@ const DashboardLayout: React.FC = () => {
     });
 
     return () => {
-      clearInterval(interval);
+      stopPoll();
       unsubscribe();
       disconnectAdminNotifications();
     };

@@ -40,7 +40,7 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'finance', label: 'Platform Finance', icon: Wallet },
   { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
   { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
-  { id: 'tickets', label: 'Support Tickets', icon: Ticket },
+  { id: 'tickets', label: 'Support', icon: Ticket },
   { id: 'email', label: 'Admin Mail', icon: Mail },
   { id: 'inbox', label: 'Admin Chat', icon: MessageSquare },
   { id: 'files', label: 'Asher Library', icon: FolderOpen },

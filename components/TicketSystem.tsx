@@ -1,5 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Ticket, TicketPriority, TicketStatus } from '../types';
 import { Search, CheckCircle2, LayoutList, KanbanSquare, Plus, X, ArrowRight, Loader } from 'lucide-react';
 import TicketTable from './tickets/TicketTable';
@@ -7,18 +8,25 @@ import TicketKanban from './tickets/TicketKanban';
 import TicketDetailModal from './tickets/TicketDetailModal';
 import {
   getAllTickets,
+  getTicketById,
   updateTicketStatus,
   createTicket,
   mapApiTicketToUiTicket,
 } from '../services/ticketService';
+import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
 
 const TicketSystem: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const deepLinkedId = searchParams.get('id');
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedTicket?.id ?? null;
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterType, setFilterType] = useState('all');
   const [error, setError] = useState('');
   const [draggedTicketId, setDraggedTicketId] = useState<string | null>(null);
 
@@ -29,14 +37,38 @@ const TicketSystem: React.FC = () => {
 
   useEffect(() => {
     loadTickets();
-    // Refresh every 30 seconds
-    const interval = setInterval(loadTickets, 30000);
-    return () => clearInterval(interval);
+    const stopPoll = pollWhileDisconnected(() => void loadTickets({ silent: true }));
+    const unsubscribe = subscribeAdminLiveNotifications((payload) => {
+      const type = String(payload.type || '');
+      if (
+        type === 'ticket_created' ||
+        type === 'ticket_message_added' ||
+        type === 'ticket_status_updated' ||
+        type === 'support_ticket_created' ||
+        type === 'support_ticket_message'
+      ) {
+        void loadTickets({ silent: true });
+        const openId = selectedIdRef.current || (typeof payload.ticketId === 'string' ? payload.ticketId : null);
+        if (openId && selectedIdRef.current === openId) {
+          void getTicketById(openId)
+            .then((live) => {
+              const mapped = mapApiTicketToUiTicket(live, '4');
+              setSelectedTicket(mapped);
+              setTickets((current) => current.map((item) => (item.id === mapped.id ? mapped : item)));
+            })
+            .catch(() => undefined);
+        }
+      }
+    });
+    return () => {
+      stopPoll();
+      unsubscribe();
+    };
   }, [searchQuery]);
 
-  const loadTickets = async () => {
+  const loadTickets = async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       setError('');
       const response = await getAllTickets(1, 100, searchQuery);
       if (!response.data || !Array.isArray(response.data)) {
@@ -50,13 +82,20 @@ const TicketSystem: React.FC = () => {
     } catch (error: any) {
       setError(error?.message || 'Tickets could not be loaded.');
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (!deepLinkedId || !tickets.length) return;
+    const match = tickets.find((ticket) => ticket.id === deepLinkedId);
+    if (match) setSelectedTicket(match);
+  }, [deepLinkedId, tickets]);
+
   const filteredTickets = tickets.filter(t => {
     const matchesStatus = filterStatus === 'all' || t.status === filterStatus;
-    return matchesStatus;
+    const matchesType = filterType === 'all' || t.type === filterType;
+    return matchesStatus && matchesType;
   });
 
   const stats = useMemo(() => {
@@ -108,8 +147,8 @@ const TicketSystem: React.FC = () => {
     <div className="h-[calc(100vh-100px)] flex flex-col space-y-6">
       <div className="flex flex-col lg:flex-row justify-between items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Support Operations</h2>
-          <p className="text-gray-600 text-sm mt-1 font-medium">Support and dispute tracking across the Asher suite.</p>
+          <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Support</h2>
+          <p className="text-gray-600 text-sm mt-1 font-medium">Issues, suggestions, disputes and live replies in one place.</p>
         </div>
         <div className="flex gap-4 items-center">
           {loading ? (
@@ -151,7 +190,27 @@ const TicketSystem: React.FC = () => {
          
          <div className="flex items-center gap-3 overflow-x-auto pb-1 md:pb-0">
             {viewMode === 'table' && (
-               <label className="relative flex items-center gap-2 rounded-xl bg-white/50 px-3 border border-white/50"><CheckCircle2 size={16}/><span className="sr-only">Filter by status</span><select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-transparent py-2.5 text-sm font-bold outline-none"><option value="all">Any status</option>{Object.values(TicketStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></label>
+               <>
+                  <label className="relative flex items-center gap-2 rounded-xl bg-white/50 px-3 border border-white/50">
+                     <CheckCircle2 size={16} />
+                     <span className="sr-only">Filter by status</span>
+                     <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-transparent py-2.5 text-sm font-bold outline-none">
+                        <option value="all">Any status</option>
+                        {Object.values(TicketStatus).map((s) => (
+                           <option key={s} value={s}>{s}</option>
+                        ))}
+                     </select>
+                  </label>
+                  <label className="relative flex items-center gap-2 rounded-xl bg-white/50 px-3 border border-white/50">
+                     <span className="sr-only">Filter by type</span>
+                     <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="bg-transparent py-2.5 text-sm font-bold outline-none">
+                        <option value="all">All types</option>
+                        <option value="SUPPORT">Issues</option>
+                        <option value="SUGGESTION">Suggestions</option>
+                        <option value="DISPUTE">Disputes</option>
+                     </select>
+                  </label>
+               </>
             )}
             <div className="flex bg-white/50 p-1 rounded-xl border border-white/50">
                <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg transition ${viewMode === 'table' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`} title="Table View"><LayoutList size={18}/></button>

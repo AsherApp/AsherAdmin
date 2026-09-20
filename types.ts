@@ -58,6 +58,7 @@ export interface Ticket {
   messages: TicketMessage[];
   history?: TicketHistory[];
   type?: 'SUPPORT' | 'SUGGESTION' | 'DISPUTE';
+  attachments?: string[];
   maintenance?: Record<string, any>;
 }
 
@@ -66,6 +67,7 @@ export interface TicketMessage {
   sender: 'User' | 'Support' | 'System';
   text: string;
   timestamp: string;
+  attachments?: string[];
 }
 
 export interface FileAsset {
@@ -128,6 +130,9 @@ export interface Email {
   isRead: boolean;
   hasAttachment?: boolean;
   isStarred?: boolean;
+  attachments?: string[];
+  isDraft?: boolean;
+  receiverId?: string;
 }
 
 export interface AppNotification {

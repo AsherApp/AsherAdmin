@@ -6,7 +6,7 @@ export interface MessagingContact {
   email: string;
   mailboxEmail: string;
   profileUrl: string | null;
-  relationship: 'landlord' | 'tenant' | 'applicant' | 'enquirer';
+  relationship: 'landlord' | 'tenant' | 'vendor' | 'applicant' | 'enquirer' | 'admin';
   landlordId: string;
 }
 

@@ -39,6 +39,18 @@ export interface Ticket {
       };
     };
   };
+  raisedByVendor?: {
+    id: string;
+    user?: {
+      id: string;
+      email: string;
+      profile?: {
+        firstName?: string;
+        lastName?: string;
+        fullname?: string;
+      };
+    };
+  };
   assignedTo?: {
     id: string;
     email: string;
@@ -97,6 +109,8 @@ export const mapApiTicketToUiTicket = (
       ? `${t.raisedByTenant.user.profile.firstName} ${t.raisedByTenant.user.profile.lastName}`.trim()
       : t.raisedByTenant?.user?.profile?.firstName) ||
     t.raisedByTenant?.tenantWebUserEmail ||
+    t.raisedByVendor?.user?.profile?.fullname ||
+    t.raisedByVendor?.user?.email ||
     t.raisedBy?.user?.email ||
     'Unknown';
 
@@ -113,6 +127,7 @@ export const mapApiTicketToUiTicket = (
         hour: '2-digit',
         minute: '2-digit',
       }),
+      attachments: Array.isArray(msg.attachments) ? msg.attachments : [],
     };
   });
 
@@ -136,6 +151,7 @@ export const mapApiTicketToUiTicket = (
     createdAt: t.createdAt,
     messages: mappedMessages,
     type: t.type,
+    attachments: t.attachments || [],
     maintenance: t.type === 'DISPUTE' ? t.maintenance : undefined,
   };
 };

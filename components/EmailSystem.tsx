@@ -3,8 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Email } from '../types';
 import { Inbox, Send, File, Trash2, Search, Star, X, Pencil, AlertCircle, ArrowLeft, Minimize2, Bold, Italic, List, Wand2, RotateCcw, Loader } from 'lucide-react';
 import { generateEmailDraft } from '../services/geminiService';
-import { getEmailFolder, Email as ApiEmail, createEmail, markEmailAsRead, recoverEmail, updateEmailState } from '../services/emailService';
+import { getEmailFolder, Email as ApiEmail, createEmail, markEmailAsRead, recoverEmail, updateEmailState, replyToEmail } from '../services/emailService';
 import { getMessagingContacts, MessagingContact } from '../services/contactsService';
+import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
 import { Avatar } from './ui/Avatar';
 
 const EmailSystem: React.FC = () => {
@@ -25,14 +26,24 @@ const EmailSystem: React.FC = () => {
   const [body, setBody] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
+  const [replyBody, setReplyBody] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
   
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadEmails();
-    // Refresh every 30 seconds
-    const interval = setInterval(loadEmails, 30000);
-    return () => clearInterval(interval);
+    void loadEmails();
+    const stopPoll = pollWhileDisconnected(() => void loadEmails({ silent: true }));
+    const unsubscribe = subscribeAdminLiveNotifications((payload) => {
+      const blob = `${payload.title || ''} ${payload.message || ''} ${payload.route || ''} ${payload.type || ''}`.toLowerCase();
+      if (blob.includes('email') || blob.includes('mail') || blob.includes('inbox') || payload.type === 'newEmail') {
+        void loadEmails({ silent: true });
+      }
+    });
+    return () => {
+      stopPoll();
+      unsubscribe();
+    };
   }, [activeFolder]);
 
   useEffect(() => {
@@ -57,9 +68,9 @@ const EmailSystem: React.FC = () => {
     };
   }, [recipientSearch, isComposeOpen]);
 
-  const loadEmails = async () => {
+  const loadEmails = async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       setSendError(null);
       {
         const response = await getEmailFolder(activeFolder, 1, 100, searchQuery);
@@ -85,9 +96,12 @@ const EmailSystem: React.FC = () => {
             subject: e.subject,
             body: e.body,
             timestamp: new Date(e.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-            isRead: e.isReadByReceiver || false,
-            isStarred: Boolean((e as any).isStarred),
+            isRead: Boolean((e as any).state?.isRead ?? e.isReadByReceiver),
+            isStarred: Boolean((e as any).state?.isStarred ?? (e as any).isStarred),
             hasAttachment: (e.attachment?.length || 0) > 0,
+            attachments: e.attachment || [],
+            isDraft: Boolean(e.isDraft),
+            receiverId: e.receiverId,
           };
         });
         setEmails(mappedEmails);
@@ -130,6 +144,7 @@ const EmailSystem: React.FC = () => {
       setSelectedRecipient(null);
       setSubject('');
       setBody('');
+      setActiveFolder('sent');
       if (editorRef.current) editorRef.current.innerHTML = '';
     } catch (error: any) {
       console.error('Error sending email:', error);
@@ -157,6 +172,39 @@ const EmailSystem: React.FC = () => {
     setBody(draft);
     if (editorRef.current) editorRef.current.innerHTML = draft;
     setIsDrafting(false);
+  };
+
+  const openEmail = (email: Email) => {
+    if (activeFolder === 'drafts' || email.isDraft) {
+      setSubject(email.subject || '');
+      setBody(email.body || '');
+      if (editorRef.current) editorRef.current.innerHTML = email.body || '';
+      const match = systemUsers.find((u) => u.userId === email.receiverId || u.mailboxEmail === email.to[0]?.email);
+      setSelectedRecipient(match || null);
+      setRecipientSearch(match ? '' : email.to[0]?.email || '');
+      setIsComposeOpen(true);
+      setComposeMinimized(false);
+      return;
+    }
+    setSelectedEmail(email);
+    if (!email.isRead && email.folder === 'inbox') {
+      void markEmailAsRead(email.id).then(loadEmails).catch((err) => setSendError(err?.message || 'Message could not be marked as read.'));
+    }
+  };
+
+  const handleReply = async () => {
+    if (!selectedEmail || !replyBody.trim() || isReplying) return;
+    setIsReplying(true);
+    setSendError(null);
+    try {
+      await replyToEmail(selectedEmail.id, replyBody.trim());
+      setReplyBody('');
+      await loadEmails();
+    } catch (error: any) {
+      setSendError(error?.message || 'Reply could not be sent.');
+    } finally {
+      setIsReplying(false);
+    }
   };
 
   const toggleStar = async (e: React.MouseEvent, id: string) => {
@@ -253,11 +301,37 @@ const EmailSystem: React.FC = () => {
                   </div>
                   
                   <div className="whitespace-pre-wrap text-gray-800 font-medium text-sm leading-relaxed min-h-[200px]">{selectedEmail.body.replace(/<[^>]*>/g, '')}</div>
+                  {(selectedEmail.attachments || []).length > 0 && (
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      {selectedEmail.attachments!.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer" className="block">
+                          <img src={url} alt="" className="h-24 w-24 rounded-xl object-cover border border-white/40" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  {selectedEmail.folder === 'inbox' && (
+                    <div className="mt-8 pt-6 border-t border-white/30">
+                      <textarea
+                        value={replyBody}
+                        onChange={(e) => setReplyBody(e.target.value)}
+                        placeholder="Write a reply..."
+                        className="w-full min-h-[100px] rounded-xl border border-white/50 bg-white/60 p-4 text-sm outline-none font-medium"
+                      />
+                      <button
+                        onClick={() => void handleReply()}
+                        disabled={!replyBody.trim() || isReplying}
+                        className="mt-3 bg-red-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
+                      >
+                        {isReplying ? 'Sending...' : 'Send reply'}
+                      </button>
+                    </div>
+                  )}
                </div>
             ) : (
                filteredEmails.length > 0 ? (
                  filteredEmails.map(email => (
-                    <div key={email.id} onClick={() => { setSelectedEmail(email); if (!email.isRead && email.folder === 'inbox') void markEmailAsRead(email.id).then(loadEmails).catch((e) => setSendError(e?.message || 'Message could not be marked as read.')); }} className="group flex items-center px-4 py-3.5 border-b border-white/30 hover:bg-white/60 cursor-pointer transition-colors">
+                    <div key={email.id} onClick={() => openEmail(email)} className="group flex items-center px-4 py-3.5 border-b border-white/30 hover:bg-white/60 cursor-pointer transition-colors">
                        <div className="flex items-center gap-3 mr-3 pl-2">
                           <button onClick={(e) => void toggleStar(e, email.id)} className={`hover:scale-110 transition-transform ${email.isStarred ? 'text-amber-400 fill-amber-400' : 'text-gray-300 hover:text-amber-400'}`}>
                              <Star size={18} />

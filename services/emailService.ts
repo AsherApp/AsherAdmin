@@ -67,7 +67,12 @@ export const getEmailFolder = async (folder: 'inbox' | 'sent' | 'drafts' | 'tras
   if (folder === 'trash') params.set('isThrash', 'true');
   if (folder === 'starred') params.set('isStarred', 'true');
   const response = await api.get(`${endpoint}?${params.toString()}`);
-  return { data: Array.isArray(response.data) ? response.data : [], total: response.pagination?.totalItems || response.data?.length || 0 };
+  const list = Array.isArray(response.data)
+    ? response.data
+    : Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
+  return { data: list, total: response.pagination?.totalItems || list.length };
 };
 
 export const updateEmailState = async (emailId: string, state: { isStarred?: boolean; isArchived?: boolean; isDeleted?: boolean }) => api.patch(`/emails/state/${emailId}`, state);

@@ -82,18 +82,9 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
       
       // Update ticket with new message and refreshed data
       if (result.ticket) {
-        // Map backend messages to frontend format
-        const mappedMessages: TicketMessage[] = (result.ticket.messages || []).map((msg: any) => ({
-          id: msg.id,
-          sender: msg.sender?.profile?.fullname || msg.sender?.email || 'Support',
-          text: msg.content,
-          timestamp: new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-        }));
-        
-        onUpdate({ 
-          ...ticket, 
-          messages: mappedMessages,
-        });
+        const mapped = mapApiTicketToUiTicket(result.ticket, ticket.sourceSystemId);
+        setCurrentTicket(mapped);
+        onUpdate(mapped);
       }
       
       setReplyText('');
@@ -195,8 +186,15 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                 <h1 className="text-2xl font-bold text-gray-900 mb-4 leading-snug">{currentTicket.subject}</h1>
                 <div className="glass-panel !bg-white/40 p-5 rounded-2xl mb-6">
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Description</h4>
-                  <p className="text-gray-800 text-sm leading-relaxed font-medium">{currentTicket.description}</p>
+                  <p className="text-gray-800 text-sm font-medium whitespace-pre-wrap">
+                    {currentTicket.description || 'No description provided.'}
+                  </p>
                 </div>
+                {currentTicket.attachments && currentTicket.attachments.length > 0 ? (
+                  <div className="mt-4">
+                    <Gallery images={currentTicket.attachments} label="Request photos" title="Request photos" className="min-h-[180px]" />
+                  </div>
+                ) : null}
 
                 {/* Disputed job evidence (VENDOR_APP_FLOW_SPEC.md Part 6):
                     the tagged maintenance record's photos/status/payment,
@@ -282,6 +280,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                             <span className="text-xs font-bold text-gray-400">{msg.timestamp}</span>
                          </div>
                          <div className="whitespace-pre-wrap bg-white/50 p-3 rounded-xl border border-white/50 shadow-sm text-sm text-gray-800 font-medium">{msg.text.replace(/<[^>]*>/g, '')}</div>
+                         {msg.attachments && msg.attachments.length > 0 ? (
+                           <div className="mt-2">
+                             <Gallery images={msg.attachments} label="Attachments" title="Attachments" className="min-h-[140px]" />
+                           </div>
+                         ) : null}
                       </div>
                     </div>
                     ))

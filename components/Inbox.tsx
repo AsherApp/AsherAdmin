@@ -4,7 +4,7 @@ import { Search, Send, Paperclip, Monitor, Wand2, Loader } from 'lucide-react';
 import { generateSmartReplies } from '../services/geminiService';
 import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRoom, ChatMessage as ApiChatMessage } from '../services/chatService';
 import { getCurrentUser } from '../services/authService';
-import { CompressedFileInput } from './upload/CompressedFileInput';
+import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
 import { Avatar } from './ui/Avatar';
 
 const Inbox: React.FC = () => {
@@ -23,10 +23,18 @@ const Inbox: React.FC = () => {
   const activeThread = threads.find(t => t.id === activeThreadId);
 
   useEffect(() => {
-    loadChatRooms();
-    // Refresh every 30 seconds
-    const interval = setInterval(loadChatRooms, 30000);
-    return () => clearInterval(interval);
+    void loadChatRooms();
+    const stopPoll = pollWhileDisconnected(() => void loadChatRooms({ silent: true }));
+    const unsubscribe = subscribeAdminLiveNotifications((payload) => {
+      const type = String(payload.type || '');
+      if (type === 'privateMessage' || type === 'message') {
+        void loadChatRooms({ silent: true });
+      }
+    });
+    return () => {
+      stopPoll();
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -38,9 +46,9 @@ const Inbox: React.FC = () => {
     }
   }, [activeThreadId, threads.length]);
 
-  const loadChatRooms = async () => {
+  const loadChatRooms = async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       const chatRooms = await getChatRooms();
       
       setError('');
@@ -214,7 +222,8 @@ const Inbox: React.FC = () => {
       {/* Sidebar List */}
       <div className="w-80 flex flex-col glass-panel rounded-3xl border border-white/40">
         <div className="p-5 border-b border-white/40 bg-white/20 backdrop-blur-md">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 tracking-tight">Admin Chat</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-1 tracking-tight">Direct messages</h2>
+          <p className="text-xs text-gray-500 mb-4">Account chats live here. Issues, suggestions and support replies are in Support.</p>
           <div className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
             <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search conversations..." className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium placeholder-gray-400"/>
