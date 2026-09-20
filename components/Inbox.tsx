@@ -5,6 +5,7 @@ import { generateSmartReplies } from '../services/geminiService';
 import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRoom, ChatMessage as ApiChatMessage } from '../services/chatService';
 import { getCurrentUser } from '../services/authService';
 import { CompressedFileInput } from './upload/CompressedFileInput';
+import { Avatar } from './ui/Avatar';
 
 const Inbox: React.FC = () => {
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -253,7 +254,7 @@ const Inbox: React.FC = () => {
           <>
             <div className="p-5 border-b border-white/40 flex justify-between items-center bg-white/30 backdrop-blur-md">
               <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-full bg-white/50 flex items-center justify-center font-bold text-gray-600 shadow-inner border border-white/50 text-lg">{activeThread.userName.charAt(0)}</div>
+                <Avatar size="md" name={activeThread.userName} className="shadow-inner" />
                 <div>
                   <h3 className="font-bold text-gray-800">{activeThread.userName}</h3>
                   <div className="text-xs text-gray-500 font-medium">Admin-participant conversation</div>

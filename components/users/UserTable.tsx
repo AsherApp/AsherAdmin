@@ -3,6 +3,7 @@ import React from 'react';
 import { UserProfile } from '../../types';
 import { getSystemDetails } from '../../utils/uiHelpers';
 import { PRESENCE_DOT, PRESENCE_LABEL, resolvePresence } from '../../utils/presence';
+import { Avatar } from '../ui/Avatar';
 
 interface UserTableProps {
   users: UserProfile[];
@@ -35,9 +36,11 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                 <tr key={user.id} onClick={() => onSelect(user)} className="group border-b border-white/20 hover:bg-white/40 transition-all cursor-pointer">
                   <td className="p-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-11 h-11 rounded-full glass-panel flex items-center justify-center font-bold text-gray-600 text-lg shadow-md group-hover:scale-105 transition-transform">
-                        {user.name.charAt(0)}
-                      </div>
+                      <Avatar
+                        size="md"
+                        name={user.name}
+                        className="shadow-md transition-transform group-hover:scale-105"
+                      />
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{user.name}</p>
                         <p className="text-xs text-gray-500 font-medium">{user.email}</p>

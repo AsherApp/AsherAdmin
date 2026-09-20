@@ -38,21 +38,3 @@ export const getStatusColor = (s: TicketStatus) => {
   }
 };
 
-export const getAvatarColor = (name: string) => {
-    const colors = [
-      'bg-red-100 text-red-700 border-red-200',
-      'bg-blue-100 text-blue-700 border-blue-200',
-      'bg-green-100 text-green-700 border-green-200',
-      'bg-amber-100 text-amber-700 border-amber-200',
-      'bg-purple-100 text-purple-700 border-purple-200',
-    ];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-export const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-};

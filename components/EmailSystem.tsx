@@ -5,6 +5,7 @@ import { Inbox, Send, File, Trash2, Search, Star, X, Pencil, AlertCircle, ArrowL
 import { generateEmailDraft } from '../services/geminiService';
 import { getEmailFolder, Email as ApiEmail, createEmail, markEmailAsRead, recoverEmail, updateEmailState } from '../services/emailService';
 import { getMessagingContacts, MessagingContact } from '../services/contactsService';
+import { Avatar } from './ui/Avatar';
 
 const EmailSystem: React.FC = () => {
   const [emails, setEmails] = useState<Email[]>([]);
@@ -184,12 +185,6 @@ const EmailSystem: React.FC = () => {
   };
 
   // Helpers
-  const getAvatarColor = (name: string) => {
-      const colors = ['bg-red-100 text-red-700', 'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700', 'bg-amber-100 text-amber-700'];
-      let hash = 0; for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-      return colors[Math.abs(hash) % colors.length];
-  };
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
   const SidebarItem = ({ id, label, icon: Icon }: { id: string, label: string, icon: any }) => (
     <button 
@@ -247,7 +242,7 @@ const EmailSystem: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-4 mb-8 pb-6 border-b border-white/30">
-                     <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg border shadow-sm ${getAvatarColor(selectedEmail.from.name)}`}>{getInitials(selectedEmail.from.name)}</div>
+                     <Avatar size="lg" name={selectedEmail.from.name} className="shadow-sm" />
                      <div className="flex-1">
                         <div className="flex justify-between items-baseline">
                            <h3 className="font-bold text-gray-900 text-lg">{selectedEmail.from.name}</h3>
@@ -269,9 +264,7 @@ const EmailSystem: React.FC = () => {
                           </button>
                        </div>
                        <div className="mr-4">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-bold border border-white/40 shadow-sm ${getAvatarColor(email.from.name)}`}>
-                             {getInitials(email.from.name)}
-                          </div>
+                          <Avatar size="sm" name={email.from.name} className="shadow-sm" />
                        </div>
                        <div className={`w-48 truncate text-sm ${email.isRead ? 'font-bold text-gray-700' : 'font-extrabold text-gray-900'}`}>{email.from.name}</div>
                        <div className="flex-1 truncate text-sm text-gray-600 group-hover:text-gray-800">

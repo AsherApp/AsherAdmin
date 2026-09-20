@@ -3,6 +3,7 @@ import React from 'react';
 import { Ticket, TicketPriority, TicketStatus } from '../../types';
 import { MessageSquare } from 'lucide-react';
 import { getSystemDetails, getPriorityColor, getStatusColor } from '../../utils/uiHelpers';
+import { Avatar } from '../ui/Avatar';
 
 interface TicketTableProps {
   tickets: Ticket[];
@@ -64,9 +65,7 @@ const TicketTable: React.FC<TicketTableProps> = ({ tickets, onSelect }) => {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-[10px] font-bold text-gray-600 shadow-sm">
-                        {ticket.user.charAt(0)}
-                      </div>
+                      <Avatar size="xs" name={ticket.user} className="shadow-sm" />
                       <span className="text-xs font-semibold text-gray-700">{ticket.user}</span>
                     </div>
                   </td>

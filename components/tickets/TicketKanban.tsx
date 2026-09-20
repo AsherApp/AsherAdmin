@@ -3,6 +3,7 @@ import React from 'react';
 import { Ticket, TicketStatus } from '../../types';
 import { Clock, GripHorizontal } from 'lucide-react';
 import { getSystemDetails, getPriorityColor } from '../../utils/uiHelpers';
+import { Avatar } from '../ui/Avatar';
 
 interface TicketKanbanProps {
   tickets: Ticket[];
@@ -89,9 +90,7 @@ const TicketKanban: React.FC<TicketKanbanProps> = ({ tickets, onSelect, onStatus
 
                     <div className="flex items-center justify-between pt-3 border-t border-gray-200/50">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] font-bold">
-                          {ticket.user.charAt(0)}
-                        </div>
+                        <Avatar size="xs" name={ticket.user} />
                         <span className="text-xs font-medium text-gray-500 truncate max-w-[100px]">{ticket.user}</span>
                       </div>
                       <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1">

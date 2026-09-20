@@ -8,6 +8,7 @@ import {
   FileText, List, Bold, Italic, Underline, Link as LinkIcon, ListOrdered
 } from 'lucide-react';
 import { getSystemDetails, getPriorityColor } from '../../utils/uiHelpers';
+import { Avatar } from '../ui/Avatar';
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -390,7 +391,7 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
               <div>
                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1">Reporter</label>
                  <div className="flex items-center gap-2 p-2 bg-white/40 rounded-lg border border-white/40">
-                    <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold">{currentTicket.user.charAt(0)}</div>
+                    <Avatar size="xs" name={currentTicket.user} />
                     <span className="text-sm font-bold text-gray-700">{currentTicket.user}</span>
                  </div>
               </div>

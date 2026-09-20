@@ -19,6 +19,7 @@ import {
   getUserPortfolio,
 } from '../../services/userService';
 import type { UserPortfolio } from '../../services/adminService';
+import { Avatar } from '../ui/Avatar';
 import {
   getTicketsByUserId,
   createTicket,
@@ -298,7 +299,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
           {/* Sidebar */}
           <div className="w-80 border-r border-white/20 flex flex-col overflow-y-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}>
             <div className="p-8 flex flex-col items-center border-b border-white/20 bg-gradient-to-b from-white/10 to-transparent">
-              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-4xl font-bold text-white shadow-xl mb-5 ring-4 ring-white/20 backdrop-blur-md">{user.name.charAt(0)}</div>
+              <Avatar size="2xl" name={user.name} className="mb-5 shadow-xl" />
               <h3 className="text-xl font-bold text-gray-900 text-center tracking-tight">{user.name}</h3>
               <p className="text-gray-600 text-sm mb-5 font-medium">{user.email}</p>
               <div className={`px-4 py-1.5 rounded-full text-xs font-bold border backdrop-blur-md shadow-sm ${user.status === 'Active' ? 'bg-green-100/30 text-green-800 border-green-200/40' : 'bg-red-100/30 text-red-800 border-red-200/40'}`}>{user.status} Account</div>
