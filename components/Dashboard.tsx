@@ -137,8 +137,8 @@ const Dashboard: React.FC = () => {
               <AreaChart data={activityData.length > 0 ? activityData : [{ name: 'No Data', users: 0, tickets: 0 }]}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#DC2626" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#A51636" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#A51636" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4B5563" stopOpacity={0.3}/>
@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
                     boxShadow: '0 4px 20px rgba(0,0,0,0.1)' 
                   }}
                 />
-                <Area type="monotone" dataKey="users" stroke="#DC2626" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={3} />
+                <Area type="monotone" dataKey="users" stroke="#A51636" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={3} />
                 <Area type="monotone" dataKey="tickets" stroke="#4B5563" fillOpacity={1} fill="url(#colorTickets)" strokeWidth={3} />
               </AreaChart>
             </ResponsiveContainer>

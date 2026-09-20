@@ -160,8 +160,8 @@ const FinancialReports: React.FC = () => {
                   <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="colorFee" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#A51636" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#A51636" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="date" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} dy={10} />
@@ -175,7 +175,7 @@ const FinancialReports: React.FC = () => {
                 }}
               />
               <Area type="monotone" dataKey="gross" name="Gross Volume" stroke="#2563EB" fillOpacity={1} fill="url(#colorGross)" strokeWidth={2} />
-              <Area type="monotone" dataKey="fee" name="Commission" stroke="#DC2626" fillOpacity={1} fill="url(#colorFee)" strokeWidth={2} />
+              <Area type="monotone" dataKey="fee" name="Commission" stroke="#A51636" fillOpacity={1} fill="url(#colorFee)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
