@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { getSystemDetails, getPriorityColor } from '../../utils/uiHelpers';
 import { Avatar } from '../ui/Avatar';
+import { Gallery } from '../ui/Gallery';
 
 interface TicketDetailModalProps {
   ticket: Ticket;
@@ -219,12 +220,13 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                       </span>
                     </div>
                     {[...((currentTicket as any).maintenance.startAttachments ?? []), ...((currentTicket as any).maintenance.endAttachments ?? [])].length > 0 ? (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {[...((currentTicket as any).maintenance.startAttachments ?? []), ...((currentTicket as any).maintenance.endAttachments ?? [])].map((url: string, i: number) => (
-                          <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                            <img src={url} alt={`Job evidence ${i + 1}`} className="w-16 h-16 object-cover rounded-lg border border-red-100" />
-                          </a>
-                        ))}
+                      <div className="mt-3">
+                        <Gallery
+                          images={[...((currentTicket as any).maintenance.startAttachments ?? []), ...((currentTicket as any).maintenance.endAttachments ?? [])]}
+                          label="Job evidence"
+                          title="Job evidence"
+                          className="min-h-[220px]"
+                        />
                       </div>
                     ) : (
                       <p className="text-xs text-gray-400 mt-2">No before/after photos on this job.</p>

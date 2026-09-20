@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Check, Clock, Loader, RefreshCw, Store, Tag, X } from 'lucide-react';
+import { Gallery } from './ui/Gallery';
 import {
   getAdsForModeration,
   ModeratedAd,
@@ -34,6 +35,8 @@ const AdModerationReview: React.FC = () => {
   const [items, setItems] = useState<ModeratedAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
+  // Which ad's photos are open in the gallery.
+  const [photoAdId, setPhotoAdId] = useState<string | null>(null);
   const [error, setError] = useState('');
   // A rejection has to say why, so the seller knows what to fix.
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -140,11 +143,30 @@ const AdModerationReview: React.FC = () => {
               >
                 <div className="flex flex-wrap items-start gap-4">
                   {ad.attachment?.[0] ? (
-                    <img
-                      src={ad.attachment[0]}
-                      alt=""
-                      className="h-24 w-24 rounded-2xl object-cover"
-                    />
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setPhotoAdId(ad.id)}
+                        className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl"
+                        aria-label={`View all ${ad.attachment.length} photos`}
+                      >
+                        <img src={ad.attachment[0]} alt="" className="h-full w-full object-cover" />
+                        {ad.attachment.length > 1 ? (
+                          <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            +{ad.attachment.length - 1}
+                          </span>
+                        ) : null}
+                      </button>
+                      {/* Moderation needs every photo, not just the first. */}
+                      <Gallery
+                        images={ad.attachment}
+                        label="Ad photos"
+                        title={ad.title ?? 'Ad'}
+                        fullscreenOnly
+                        open={photoAdId === ad.id}
+                        onOpenChange={(next) => setPhotoAdId(next ? ad.id : null)}
+                      />
+                    </>
                   ) : (
                     <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-gray-100 text-gray-300">
                       {isItem ? <Tag className="h-7 w-7" /> : <Store className="h-7 w-7" />}
