@@ -188,7 +188,11 @@ const EmailSystem: React.FC = () => {
     }
     setSelectedEmail(email);
     if (!email.isRead && email.folder === 'inbox') {
-      void markEmailAsRead(email.id).then(loadEmails).catch((err) => setSendError(err?.message || 'Message could not be marked as read.'));
+      void markEmailAsRead(email.id)
+        // Silent: the reader is looking at the message, so the list
+        // behind it should not blink through a loading state.
+        .then(() => loadEmails({ silent: true }))
+        .catch((err) => setSendError(err?.message || 'Message could not be marked as read.'));
     }
   };
 

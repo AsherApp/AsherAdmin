@@ -6,6 +6,7 @@ import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRo
 import { getCurrentUser } from '../services/authService';
 import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
 import { Avatar } from './ui/Avatar';
+import { CompressedFileInput } from './upload/CompressedFileInput';
 
 const Inbox: React.FC = () => {
   const [threads, setThreads] = useState<ChatThread[]>([]);

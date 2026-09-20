@@ -249,11 +249,11 @@ const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, onClose, 
                 {aiAnalysis && (
                   <div className="bg-gradient-to-br from-red-50/80 to-white/80 p-5 rounded-2xl border border-red-100 shadow-sm animate-in fade-in">
                     <div className="mb-4">
-                       <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Summary</span>
+                       <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Summary</span>
                        <p className="text-sm font-medium text-gray-800 mt-1">{aiAnalysis.summary}</p>
                     </div>
                     <div>
-                       <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Suggested Reply</span>
+                       <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Suggested Reply</span>
                        <div className="bg-white/60 p-3 rounded-xl border border-white/50 mt-1 text-sm text-gray-700 italic">
                           "{aiAnalysis.suggestion}"
                           <button onClick={() => applyAiSuggestion(aiAnalysis.suggestion)} className="ml-2 text-xs text-red-600 font-bold hover:underline not-italic">Use this</button>

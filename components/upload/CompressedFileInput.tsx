@@ -67,7 +67,10 @@ export const CompressedFileInput = forwardRef<HTMLInputElement, Props>(
         style={style}
         capture={capture}
         onChange={async event => {
-          const list = Array.from(event.target.files ?? []);
+          // Not `Array.from(files ?? [])`: that makes a `FileList | never[]`
+          // union, which TypeScript cannot unify across Array.from's
+          // overloads, so the result widens to `unknown[]`.
+          const list: File[] = event.target.files ? Array.from(event.target.files) : [];
           event.target.value = '';
           if (list.length === 0) {
             onFile?.(null);

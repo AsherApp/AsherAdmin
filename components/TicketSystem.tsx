@@ -163,7 +163,7 @@ const TicketSystem: React.FC = () => {
               </div>
               <div className="glass-panel px-5 py-3 rounded-2xl flex flex-col items-center min-w-[100px] border-red-100 bg-red-50/30">
                 <span className="text-2xl font-bold text-red-600">{stats.critical}</span>
-                <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Critical</span>
+                <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Critical</span>
               </div>
             </>
           )}
