@@ -79,7 +79,7 @@ const AdModerationReview: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Marketplace moderation</h2>
           <p className="mt-1 text-sm text-gray-500">
-            Nothing reaches buyers until it is approved here.
+            Tenant listings wait here until you approve them. Platform Pricing is only the rates.
           </p>
         </div>
         <button

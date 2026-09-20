@@ -25,13 +25,26 @@ export type ModeratedAd = {
 
 export type ModerationPage = { items: ModeratedAd[]; total: number };
 
+/** ApiResponse wraps twice: `{ data: { data: payload } }`. */
+function unwrap<T>(response: unknown): T {
+  const root = response as { data?: { data?: T } & T } | T;
+  if (root && typeof root === 'object' && 'data' in root) {
+    const layer = (root as { data?: { data?: T } & T }).data;
+    if (layer && typeof layer === 'object' && 'data' in layer && layer.data != null) {
+      return layer.data as T;
+    }
+    return layer as T;
+  }
+  return root as T;
+}
+
 export const getAdsForModeration = async (
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL' = 'PENDING'
 ): Promise<ModerationPage> => {
   const response = await api.get(
     `/admin/ads/moderation?status=${encodeURIComponent(status)}`
   );
-  const payload = response?.data ?? response;
+  const payload = unwrap<ModerationPage>(response);
   return { items: payload?.items ?? [], total: payload?.total ?? 0 };
 };
 
@@ -41,5 +54,5 @@ export const reviewAd = async (
   reason?: string
 ) => {
   const response = await api.patch(`/admin/ads/${adId}/review`, { decision, reason });
-  return response?.data ?? response;
+  return unwrap(response);
 };
