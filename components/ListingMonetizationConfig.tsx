@@ -240,7 +240,7 @@ const ListingMonetizationConfigPage: React.FC = () => {
                 label="Free listings per month"
                 value={form.freePerMonth}
                 onChange={(v) => setField('freePerMonth', v)}
-                hint="Each landlord gets this many free publishes each calendar month."
+                hint="Each landlord gets this many free publishes each calendar month. Every publish stays live for 15 days, then comes off unless they extend it. After the free allowance, GBP is £4 and NGN is ₦5,000."
               />
               <Field
                 label="Premium pin duration (days)"
