@@ -29,6 +29,7 @@ const Inbox = lazy(() => import('./components/Inbox'));
 const EmailSystem = lazy(() => import('./components/EmailSystem'));
 const Settings = lazy(() => import('./components/Settings'));
 const SupportContent = lazy(() => import('./components/SupportContent'));
+const LandlordAccessRequests = lazy(() => import('./components/LandlordAccessRequests'));
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -199,6 +200,7 @@ const DashboardLayout: React.FC = () => {
       case 'dashboard': return <Dashboard />;
       case 'systems': return <SystemMonitor />;
       case 'landlords': return <LandlordsSection />;
+      case 'landlord-access-requests': return <LandlordAccessRequests />;
       case 'vendors': return <VendorsSection />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
       case 'ad-moderation': return <AdModerationReview />;

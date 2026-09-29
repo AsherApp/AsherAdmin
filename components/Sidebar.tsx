@@ -20,6 +20,7 @@ import {
   Wallet,
   BarChart3,
   Store,
+  UserPlus,
 } from 'lucide-react';
 import { logout } from '../services/authService';
 
@@ -34,6 +35,7 @@ export const ADMIN_MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'systems', label: 'System Monitor', icon: Activity },
   { id: 'landlords', label: 'Landlords', icon: Users },
+  { id: 'landlord-access-requests', label: 'Access Requests', icon: UserPlus },
   { id: 'vendors', label: 'Vendors', icon: Wrench },
   { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
   { id: 'ad-moderation', label: 'Marketplace', icon: Store },

@@ -181,3 +181,44 @@ export const setLandlordSuspension = async (
   return api.post(`/admin/landlords/${userId}/suspend`, { suspend });
 };
 
+
+/** A landlord who asked for access from the public website. */
+export interface LandlordAccessRequest {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  message: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  invitedUserId: string | null;
+  createdAt: string;
+}
+
+/** Newest first. Omit `status` for all of them. */
+export const getLandlordAccessRequests = async (
+  status?: LandlordAccessRequest['status']
+): Promise<LandlordAccessRequest[]> => {
+  // This client's get() takes a url only, so the filter goes in the query.
+  const query = status ? `?status=${encodeURIComponent(status)}` : '';
+  const response = await api.get(`/admin/landlord-access-requests${query}`);
+  return response?.data?.data ?? response?.data ?? [];
+};
+
+/**
+ * Approving sends the ordinary landlord invitation — the same account, email
+ * and set-password link an admin-invited landlord has always received.
+ */
+export const approveLandlordAccessRequest = async (id: string) => {
+  const response = await api.post(`/admin/landlord-access-requests/${id}/approve`);
+  return response?.data ?? response;
+};
+
+export const rejectLandlordAccessRequest = async (id: string, reviewNote?: string) => {
+  const response = await api.post(`/admin/landlord-access-requests/${id}/reject`, {
+    reviewNote,
+  });
+  return response?.data ?? response;
+};
