@@ -34,6 +34,12 @@ const LandlordAccessRequests: React.FC = () => {
   /** The id currently being approved or rejected, so only its row is busy. */
   const [working, setWorking] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * Set only when the invitation email failed. Telling an admin to share the
+   * link without showing it leaves them nothing to share — the approval has
+   * already happened by then, so this is the only copy they get.
+   */
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +69,7 @@ const LandlordAccessRequests: React.FC = () => {
       setWorking(request.id);
       try {
         await rejectLandlordAccessRequest(request.id, note || undefined);
+        setFallbackLink(null);
         setNotice(`Rejected ${request.email}.`);
         await load();
       } catch {
@@ -79,9 +86,11 @@ const LandlordAccessRequests: React.FC = () => {
     setWorking(request.id);
     try {
       const result: any = await approveLandlordAccessRequest(request.id);
+      const emailFailed = result?.data?.emailSent === false;
+      setFallbackLink(emailFailed ? result?.data?.invitationLink ?? null : null);
       setNotice(
-        result?.data?.emailSent === false
-          ? `Approved ${request.email}, but the invitation email did not send — share the link from the response manually.`
+        emailFailed
+          ? `Approved ${request.email}, but the invitation email did not send — send them the link below.`
           : `Approved ${request.email}. Their invitation is on its way.`
       );
       await load();
@@ -129,6 +138,21 @@ const LandlordAccessRequests: React.FC = () => {
       {notice ? (
         <div className="mb-3 rounded-md bg-green-50 px-4 py-2 text-sm text-green-800">
           {notice}
+        </div>
+      ) : null}
+      {fallbackLink ? (
+        <div className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="mb-2 font-medium">Their set-password link</p>
+          <code className="block break-all rounded bg-white px-2 py-1 text-xs">
+            {fallbackLink}
+          </code>
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(fallbackLink)}
+            className="mt-2 rounded-md bg-amber-900 px-3 py-1.5 text-xs font-medium text-white"
+          >
+            Copy link
+          </button>
         </div>
       ) : null}
       {error ? (
