@@ -1,3 +1,4 @@
+import { watchData, dataRuntime } from '../services/dataRuntime';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -13,7 +14,7 @@ import {
   createTicket,
   mapApiTicketToUiTicket,
 } from '../services/ticketService';
-import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
+import { subscribeAdminLiveNotifications } from '../services/notificationSocket';
 
 const TicketSystem: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -37,7 +38,7 @@ const TicketSystem: React.FC = () => {
 
   useEffect(() => {
     loadTickets();
-    const stopPoll = pollWhileDisconnected(() => void loadTickets({ silent: true }));
+    const stopPoll = watchData({ key: 'admin:tickets', domain: 'support', immediate: false, load: () => loadTickets({ silent: true }) });
     const unsubscribe = subscribeAdminLiveNotifications((payload) => {
       const type = String(payload.type || '');
       if (
@@ -47,7 +48,7 @@ const TicketSystem: React.FC = () => {
         type === 'support_ticket_created' ||
         type === 'support_ticket_message'
       ) {
-        void loadTickets({ silent: true });
+        dataRuntime.invalidate(['support']);
         const openId = selectedIdRef.current || (typeof payload.ticketId === 'string' ? payload.ticketId : null);
         if (openId && selectedIdRef.current === openId) {
           void getTicketById(openId)

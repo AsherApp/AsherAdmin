@@ -1,3 +1,4 @@
+import { watchData, dataRuntime } from '../services/dataRuntime';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Email } from '../types';
@@ -5,7 +6,7 @@ import { Inbox, Send, File, Trash2, Search, Star, X, Pencil, AlertCircle, ArrowL
 import { generateEmailDraft } from '../services/geminiService';
 import { getEmailFolder, Email as ApiEmail, createEmail, markEmailAsRead, recoverEmail, updateEmailState, replyToEmail } from '../services/emailService';
 import { getMessagingContacts, MessagingContact } from '../services/contactsService';
-import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
+import { subscribeAdminLiveNotifications } from '../services/notificationSocket';
 import { Avatar } from './ui/Avatar';
 
 const EmailSystem: React.FC = () => {
@@ -33,11 +34,11 @@ const EmailSystem: React.FC = () => {
 
   useEffect(() => {
     void loadEmails();
-    const stopPoll = pollWhileDisconnected(() => void loadEmails({ silent: true }));
+    const stopPoll = watchData({ key: `admin:emails:${activeFolder}`, domain: 'support', immediate: false, load: () => loadEmails({ silent: true }) });
     const unsubscribe = subscribeAdminLiveNotifications((payload) => {
       const blob = `${payload.title || ''} ${payload.message || ''} ${payload.route || ''} ${payload.type || ''}`.toLowerCase();
       if (blob.includes('email') || blob.includes('mail') || blob.includes('inbox') || payload.type === 'newEmail') {
-        void loadEmails({ silent: true });
+        dataRuntime.invalidate(['support']);
       }
     });
     return () => {

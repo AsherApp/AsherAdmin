@@ -1,4 +1,7 @@
 import { io, Socket } from 'socket.io-client';
+import { dataRuntime } from './dataRuntime';
+
+let unbindDataRuntime: (() => void) | undefined;
 
 let socket: Socket | null = null;
 let connectedUserId: string | null = null;
@@ -51,6 +54,8 @@ export function connectAdminNotifications(userId: string, token: string): Socket
   }
 
   if (socket) {
+    unbindDataRuntime?.();
+    unbindDataRuntime = undefined;
     socket.removeAllListeners();
     socket.disconnect();
     socket = null;
@@ -71,6 +76,8 @@ export function connectAdminNotifications(userId: string, token: string): Socket
   });
   connectedUserId = userId;
 
+  unbindDataRuntime?.();
+  unbindDataRuntime = dataRuntime.bindSocket(socket);
   socket.on('connect', () => joinRooms(userId));
   socket.on('reconnect', () => joinRooms(userId));
   socket.on('notification', (payload: Record<string, unknown>) => notify(payload));
@@ -92,6 +99,8 @@ export function disconnectAdminNotifications() {
     teardownTimer = null;
     if (subscriberCount > 0) return;
     if (!socket) return;
+    unbindDataRuntime?.();
+    unbindDataRuntime = undefined;
     socket.removeAllListeners();
     socket.disconnect();
     socket = null;
@@ -104,12 +113,4 @@ export function subscribeAdminLiveNotifications(handler: LiveHandler): () => voi
   return () => {
     handlers.delete(handler);
   };
-}
-
-/** HTTP fallback only while the socket is down. Engine.IO already polls the socket itself. */
-export function pollWhileDisconnected(load: () => void, everyMs = 12000): () => void {
-  const id = setInterval(() => {
-    if (!isAdminRealtimeConnected()) load();
-  }, everyMs);
-  return () => clearInterval(id);
 }

@@ -1,3 +1,4 @@
+import { watchData } from './services/dataRuntime';
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar, { ADMIN_MENU_ITEMS } from './components/Sidebar';
@@ -11,7 +12,6 @@ import {
   connectAdminNotifications,
   disconnectAdminNotifications,
   subscribeAdminLiveNotifications,
-  pollWhileDisconnected,
 } from './services/notificationSocket';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
@@ -92,7 +92,19 @@ const DashboardLayout: React.FC = () => {
   const [loadingNotifications, setLoadingNotifications] = useState(true);
   const [notificationError, setNotificationError] = useState('');
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await getAllNotifications(nextCursor);
+      setNotifications(prev => [...prev, ...page.notifications.map(convertNotification).filter(n => !prev.some(p => p.id === n.id))]);
+      setNextCursor(page.nextCursor ?? null); setUnreadCount(page.unreadCount);
+    } catch { setNotificationError('Could not load older notifications.'); }
+    finally { setLoadingMore(false); }
+  };
 
   const loadNotifications = async (opts?: { silent?: boolean }) => {
     try {
@@ -103,6 +115,8 @@ const DashboardLayout: React.FC = () => {
       setNotificationError('');
       const converted = response.notifications.map(convertNotification);
       setNotifications(converted);
+      setNextCursor(response.nextCursor ?? null);
+      setUnreadCount(response.unreadCount);
     } catch (error: any) {
       setNotificationError(error?.message || 'Notifications could not be loaded.');
     } finally {
@@ -115,9 +129,7 @@ const DashboardLayout: React.FC = () => {
   // Load notifications on mount, poll as fallback, and live socket updates
   useEffect(() => {
     void loadNotifications();
-    const stopPoll = pollWhileDisconnected(() => {
-      void loadNotifications({ silent: true });
-    });
+    const stopPoll = watchData({ key: 'admin:notifications', domain: 'notifications', immediate: false, load: () => loadNotifications({ silent: true }) });
 
     const user = getCurrentUser();
     const token = localStorage.getItem('admin_token');
@@ -143,7 +155,6 @@ const DashboardLayout: React.FC = () => {
         if (prev.some((n) => n.id === live.id)) return prev;
         return [live, ...prev];
       });
-      void loadNotifications({ silent: true });
     });
 
     return () => {
@@ -156,6 +167,7 @@ const DashboardLayout: React.FC = () => {
   const handleMarkAllRead = async () => {
     try {
       await markAllAsRead();
+      setUnreadCount(0);
       setNotifications(notifications.map(n => ({...n, isRead: true})));
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -166,6 +178,7 @@ const DashboardLayout: React.FC = () => {
     try {
       await clearAllNotifications();
       setNotifications([]);
+      setUnreadCount(0); setNextCursor(null);
     } catch (error) {
       console.error('Error clearing notifications:', error);
     }
@@ -175,6 +188,7 @@ const DashboardLayout: React.FC = () => {
     try {
       if (!notification.isRead) {
         await markAsRead(notification.id);
+        setUnreadCount(n => Math.max(0, n - 1));
         setNotifications((prev) =>
           prev.map((n) =>
             n.id === notification.id ? { ...n, isRead: true } : n
@@ -288,6 +302,7 @@ const DashboardLayout: React.FC = () => {
                </div>
                
                <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2">
+                  {nextCursor && <button disabled={loadingMore} onClick={loadMore} className="p-3 text-sm">{loadingMore ? "Loading…" : "Load older notifications"}</button>}
                   {notificationError && <div className="m-2 rounded-xl bg-red-50 p-3 text-xs text-red-800">{notificationError}</div>}
                   {loadingNotifications ? (
                      <div className="p-8 text-center text-gray-400">

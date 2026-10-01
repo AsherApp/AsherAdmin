@@ -3,6 +3,7 @@ import {
   inviteLandlord,
   resendLandlordInvite,
   cancelLandlordInvite,
+  deleteUserAccount,
   deleteLandlordAccount,
   setLandlordTempPassword,
   setLandlordSuspension,
@@ -131,4 +132,4 @@ export const getAllUsers = async (): Promise<User[]> => {
   }
 };
 
-export { resendLandlordInvite, cancelLandlordInvite, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension, getUserPortfolio };
+export { resendLandlordInvite, cancelLandlordInvite, deleteUserAccount, deleteLandlordAccount, setLandlordTempPassword, setLandlordSuspension, getUserPortfolio };

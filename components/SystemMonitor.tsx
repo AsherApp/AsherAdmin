@@ -1,3 +1,4 @@
+import { watchData } from '../services/dataRuntime';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertCircle, CheckCircle2, Clock3, ExternalLink, Globe2, Loader, RefreshCw, Server, Smartphone } from 'lucide-react';
 import { DeploymentHealth, getSystemHealth } from '../services/analyticsService';
@@ -37,9 +38,7 @@ const SystemMonitor: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void load();
-    const interval = window.setInterval(() => void load(), 60_000);
-    return () => window.clearInterval(interval);
+    return watchData({ key: 'system-health', domain: 'dashboard', load: load, intervalMs: 60000 });
   }, [load]);
 
   const operational = systems.filter((system) => system.status === 'OPERATIONAL').length;

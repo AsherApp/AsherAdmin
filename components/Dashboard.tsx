@@ -1,3 +1,4 @@
+import { watchData } from '../services/dataRuntime';
 import React, { useEffect, useState } from 'react';
 import { 
   Users, 
@@ -26,10 +27,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadDashboardData();
-    // Refresh every 5 minutes
-    const interval = setInterval(loadDashboardData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return watchData({ key: 'dashboard', domain: 'dashboard', load: loadDashboardData });
   }, []);
 
   const loadDashboardData = async () => {

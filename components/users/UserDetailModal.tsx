@@ -13,7 +13,7 @@ import UserPortfolioPanel from './UserPortfolioPanel';
 import {
   resendLandlordInvite,
   cancelLandlordInvite,
-  deleteLandlordAccount,
+  deleteUserAccount,
   setLandlordTempPassword,
   setLandlordSuspension,
   getUserPortfolio,
@@ -59,7 +59,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isPendingInvite = user.status === 'Pending Invite';
-  const isProtectedAccount = PROTECTED_DIRECTORY_EMAILS.has(user.email.toLowerCase());
+  const isProtectedAccount = PROTECTED_DIRECTORY_EMAILS.has(user.email.toLowerCase()) || user.role.toLowerCase() === 'admin';
 
   // Create Ticket State
   const [showCreateTicket, setShowCreateTicket] = useState(false);
@@ -225,14 +225,20 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
     }
     if (!confirmDelete) {
       setConfirmDelete(true);
-      setInviteError('Click Delete again to permanently remove this account.');
+      setInviteError(
+        user.role.toLowerCase() === 'landlord'
+          ? 'Click Delete again to permanently delete this account, its properties, tenancies and related database records. Other users keep their accounts.'
+          : user.role.toLowerCase() === 'tenant'
+            ? 'Click Delete again to permanently delete this tenant and their related database records. Their landlord and property will remain.'
+            : 'Click Delete again to permanently delete this account and its related database records. Other accounts and their properties will remain.'
+      );
       return;
     }
 
     setInviteLoading('delete');
     setInviteError('');
     try {
-      const response = await deleteLandlordAccount(user.id);
+      const response = await deleteUserAccount(user.id);
       setInviteMessage(response.message || 'Account deleted successfully.');
       onDelete();
       onClose();

@@ -47,25 +47,28 @@ export const cancelLandlordInvite = async (userId: string): Promise<{
   return api.delete(`/admin/landlords/${userId}/invite`);
 };
 
-export const deleteLandlordAccount = async (userId: string): Promise<{
+export interface DeleteUserResult {
   success: boolean;
   message: string;
-}> => {
-  try {
-    return await api.delete(`/admin/users/${userId}`);
-  } catch (err: any) {
-    const status = String(err?.message || err?.status || '');
-    if (
-      status.includes('404') ||
-      status.toLowerCase().includes('not found') ||
-      status.toLowerCase().includes('cannot get') ||
-      status.toLowerCase().includes('cannot delete')
-    ) {
-      return api.delete(`/admin/landlords/${userId}`);
-    }
-    throw err;
+  data: {
+    userId: string;
+    mode: 'hard';
+    deletedRecords: number;
+    deletedByTable: Record<string, number>;
+  };
+}
+
+/** One endpoint for landlords, tenants, vendors and web users. */
+export const deleteUserAccount = async (userId: string): Promise<DeleteUserResult> => {
+  const result = await api.delete(`/admin/users/${encodeURIComponent(userId)}`);
+  if (!result.success || result.data?.mode !== 'hard') {
+    throw new Error('The account was not fully deleted. Refresh the directory and try again.');
   }
+  return result;
 };
+
+// Kept for older callers; all account types use the same deletion contract.
+export const deleteLandlordAccount = deleteUserAccount;
 
 export const setLandlordTempPassword = async (
   userId: string,

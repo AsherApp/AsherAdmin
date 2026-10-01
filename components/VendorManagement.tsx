@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Loader, X, ExternalLink, Trash2 } from 'lucide-react';
 import UserTable from './users/UserTable';
 import { getAllVendors, VendorUserProfile } from '../services/vendorService';
-import { deleteLandlordAccount } from '../services/userService';
+import { deleteUserAccount } from '../services/userService';
 
 // Parallel to UserManagement.tsx's landlord listing, for the Vendor app
 // (Part 1 of VENDOR_APP_FLOW_SPEC.md). Reuses the existing UserTable
@@ -135,13 +135,13 @@ const VendorManagement: React.FC = () => {
               onClick={async () => {
                 if (!confirmDelete) {
                   setConfirmDelete(true);
-                  setDeleteError('Click delete again to permanently remove this vendor.');
+                  setDeleteError('Click delete again to permanently delete this vendor and their related database records. Landlord accounts and properties will remain.');
                   return;
                 }
                 setDeleting(true);
                 setDeleteError('');
                 try {
-                  await deleteLandlordAccount(selectedVendor.id);
+                  await deleteUserAccount(selectedVendor.id);
                   setVendors((current) => current.filter((v) => v.id !== selectedVendor.id));
                   setTotal((current) => Math.max(0, current - 1));
                   setSelectedVendor(null);

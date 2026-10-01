@@ -1,10 +1,11 @@
+import { watchData, dataRuntime } from '../services/dataRuntime';
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatThread, ChatMessage } from '../types';
 import { Search, Send, Paperclip, Monitor, Wand2, Loader } from 'lucide-react';
 import { generateSmartReplies } from '../services/geminiService';
 import { getChatRooms, getChatMessages, getChatRoomMessages, sendMessage, ChatRoom, ChatMessage as ApiChatMessage } from '../services/chatService';
 import { getCurrentUser } from '../services/authService';
-import { subscribeAdminLiveNotifications, pollWhileDisconnected } from '../services/notificationSocket';
+import { subscribeAdminLiveNotifications } from '../services/notificationSocket';
 import { Avatar } from './ui/Avatar';
 import { CompressedFileInput } from './upload/CompressedFileInput';
 
@@ -25,11 +26,11 @@ const Inbox: React.FC = () => {
 
   useEffect(() => {
     void loadChatRooms();
-    const stopPoll = pollWhileDisconnected(() => void loadChatRooms({ silent: true }));
+    const stopPoll = watchData({ key: 'admin:chat-rooms', domain: 'chat', immediate: false, load: () => loadChatRooms({ silent: true }) });
     const unsubscribe = subscribeAdminLiveNotifications((payload) => {
       const type = String(payload.type || '');
       if (type === 'privateMessage' || type === 'message') {
-        void loadChatRooms({ silent: true });
+        dataRuntime.invalidate(['chat']);
       }
     });
     return () => {
