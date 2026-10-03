@@ -26,11 +26,11 @@ const GROUP_OPTIONS: { id: ReportGroupBy; label: string }[] = [
   { id: 'month', label: 'By month' },
 ];
 
-function formatMoney(amount: number, currency?: string): string {
+function formatMoney(amount: number, currency: string): string {
   try {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
-      currency: currency || 'GBP',
+      currency,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
@@ -42,18 +42,29 @@ const FinancialReports: React.FC = () => {
   const [summary, setSummary] = useState<RevenueSummary | null>(null);
   const [timeseries, setTimeseries] = useState<RevenueTimeseriesPoint[]>([]);
   const [groupBy, setGroupBy] = useState<ReportGroupBy>('category');
+  const [currency, setCurrency] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async (nextGroupBy: ReportGroupBy = groupBy) => {
+  const load = async (
+    nextGroupBy: ReportGroupBy = groupBy,
+    nextCurrency: string = currency
+  ) => {
     try {
       setLoading(true);
       setError(null);
       const [summaryData, seriesData] = await Promise.all([
-        getRevenueSummary({ groupBy: nextGroupBy }),
-        getRevenueTimeseries({ interval: 'day' }),
+        getRevenueSummary({
+          groupBy: nextGroupBy,
+          currency: nextCurrency || undefined,
+        }),
+        getRevenueTimeseries({
+          interval: 'day',
+          currency: nextCurrency || undefined,
+        }),
       ]);
       setSummary(summaryData);
+      setCurrency(summaryData.currency);
       setTimeseries(seriesData);
     } catch (err: any) {
       setError(err?.message || 'Failed to load financial reports');
@@ -70,6 +81,11 @@ const FinancialReports: React.FC = () => {
   const handleGroupChange = (next: ReportGroupBy) => {
     setGroupBy(next);
     load(next);
+  };
+
+  const handleCurrencyChange = (nextCurrency: string) => {
+    setCurrency(nextCurrency);
+    void load(groupBy, nextCurrency);
   };
 
   const chartData = useMemo(
@@ -90,6 +106,14 @@ const FinancialReports: React.FC = () => {
     );
   }
 
+  if (!summary) {
+    return (
+      <div className="glass-panel rounded-2xl border border-red-200 bg-red-50/50 p-4 text-sm font-medium text-red-700">
+        {error || 'Financial reports are unavailable.'}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -99,13 +123,27 @@ const FinancialReports: React.FC = () => {
             Gross transaction volume vs. Asher's commission — real revenue events, not raw transaction rows.
           </p>
         </div>
-        <button
-          onClick={() => load()}
-          className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-red-200 text-red-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-50 transition-all"
-        >
-          <RefreshCw size={14} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {summary?.availableCurrencies?.length ? (
+            <select
+              value={currency}
+              onChange={(event) => handleCurrencyChange(event.target.value)}
+              className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700"
+              aria-label="Report currency"
+            >
+              {summary.availableCurrencies.map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+          ) : null}
+          <button
+            onClick={() => load()}
+            className="flex items-center gap-2 bg-white/60 backdrop-blur-md border border-red-200 text-red-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-50 transition-all"
+          >
+            <RefreshCw size={14} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -119,25 +157,25 @@ const FinancialReports: React.FC = () => {
         <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-6 -mt-6"></div>
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Gross Volume</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary?.grossVolume || 0)}</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary.grossVolume || 0, summary.currency)}</h3>
           <div className="p-2 bg-blue-100 text-blue-600 rounded-xl w-fit mt-3"><Wallet size={16} /></div>
         </div>
         <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full -mr-6 -mt-6"></div>
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Commission Revenue</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary?.commissionRevenue || 0)}</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary.commissionRevenue || 0, summary.currency)}</h3>
           <div className="p-2 bg-red-100 text-red-600 rounded-xl w-fit mt-3"><TrendingUp size={16} /></div>
         </div>
         <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-6 -mt-6"></div>
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Fee-for-Service Revenue</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary?.feeForServiceRevenue || 0)}</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary.feeForServiceRevenue || 0, summary.currency)}</h3>
           <div className="p-2 bg-purple-100 text-purple-600 rounded-xl w-fit mt-3"><DollarSign size={16} /></div>
         </div>
         <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full -mr-6 -mt-6"></div>
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Total Asher Revenue</p>
-          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary?.totalRevenue || 0)}</h3>
+          <h3 className="text-2xl font-bold text-gray-800 mt-1">{formatMoney(summary.totalRevenue || 0, summary.currency)}</h3>
           <div className="p-2 bg-green-100 text-green-600 rounded-xl w-fit mt-3"><DollarSign size={16} /></div>
         </div>
         <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
@@ -222,9 +260,9 @@ const FinancialReports: React.FC = () => {
                 summary!.breakdown!.map((row, idx) => (
                   <tr key={idx} className="border-b border-gray-100 hover:bg-white/40 transition-colors">
                     <td className="py-3 pr-4 font-semibold text-gray-800">{row.group || 'Unassigned'}</td>
-                    <td className="py-3 pr-4 text-gray-600">{formatMoney(row.grossAmount)}</td>
-                    <td className="py-3 pr-4 text-red-600 font-bold">{formatMoney(row.feeAmount)}</td>
-                    <td className="py-3 pr-4 text-gray-600">{formatMoney(row.netAmount)}</td>
+                    <td className="py-3 pr-4 text-gray-600">{formatMoney(row.grossAmount, summary.currency)}</td>
+                    <td className="py-3 pr-4 text-red-600 font-bold">{formatMoney(row.feeAmount, summary.currency)}</td>
+                    <td className="py-3 pr-4 text-gray-600">{formatMoney(row.netAmount, summary.currency)}</td>
                     <td className="py-3 text-gray-500">{row.count}</td>
                   </tr>
                 ))

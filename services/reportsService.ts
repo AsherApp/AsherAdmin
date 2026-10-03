@@ -9,6 +9,8 @@ export type RevenueBreakdownRow = {
 };
 
 export type RevenueSummary = {
+  currency: string;
+  availableCurrencies: string[];
   grossVolume: number;
   commissionRevenue: number;
   feeForServiceRevenue: number;
