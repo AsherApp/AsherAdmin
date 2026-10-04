@@ -9,6 +9,7 @@ export type AddressSuggestion = {
   state: string | null;
   country: string;
   postcode: string | null;
+  houseNumber?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 };
@@ -42,8 +43,14 @@ export function isUkCountry(country?: string | null): boolean {
   return value.includes('united kingdom') || value === 'uk' || value === 'gb';
 }
 
-function formatSuggestionLine(item: AddressSuggestion): string {
-  return [item.street, item.area, item.city, item.postcode].filter(Boolean).join(', ');
+export function formatSuggestionLine(item: AddressSuggestion): string {
+  const street = item.street?.trim() || '';
+  const house = item.houseNumber?.trim() || '';
+  const line1 =
+    street && house && !street.toLowerCase().startsWith(house.toLowerCase())
+      ? `${house} ${street}`
+      : street || house;
+  return [line1, item.area, item.city, item.postcode].filter(Boolean).join(', ');
 }
 
 export function suggestionToAddressParts(
@@ -51,7 +58,8 @@ export function suggestionToAddressParts(
   typed?: string
 ): ResolvedAddressParts {
   const street = item.street?.trim() || '';
-  const house = extractHouseNumber(typed || '');
+  const house =
+    item.houseNumber?.trim() || extractHouseNumber(typed || '') || '';
   const address =
     street && house && !street.toLowerCase().startsWith(house.toLowerCase())
       ? `${house} ${street}`
@@ -95,7 +103,32 @@ export async function resolveUkPropertyAddress(params: {
     const response = await api.post('/addresses/resolve/uk', params);
     const data = response?.data ?? response;
     if (!data) return null;
-    return suggestionToAddressParts(data, params.streetHint);
+    return suggestionToAddressParts(
+      {
+        ...data,
+        houseNumber: data.houseNumber || params.houseNumber || null,
+      },
+      params.houseNumber || params.streetHint
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveUkPropertySuggestion(params: {
+  postcode: string;
+  houseNumber?: string;
+  cityHint?: string;
+}): Promise<AddressSuggestion | null> {
+  try {
+    const response = await api.post('/addresses/resolve/uk', params);
+    const data = response?.data ?? response;
+    if (!data) return null;
+    return {
+      ...data,
+      id: data.id || 'resolved',
+      houseNumber: data.houseNumber || params.houseNumber || null,
+    };
   } catch {
     return null;
   }
