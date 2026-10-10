@@ -47,8 +47,15 @@ const normalizeApiBaseUrl = (url: string): string => {
   return normalized;
 };
 
-// Get API base URL from environment variable
-const API_BASE_URL = normalizeApiBaseUrl(getEnvVar('VITE_API_BASE_URL'));
+// Desktop release builds (`tauri build` / `vite build`) always talk to the live API.
+// `npm run dev` and `tauri:dev` keep using VITE_API_BASE_URL from .env.
+const LIVE_API_BASE_URL = 'https://asherbe-production.up.railway.app/api';
+
+export const API_BASE_URL = normalizeApiBaseUrl(
+  import.meta.env.PROD ? LIVE_API_BASE_URL : getEnvVar('VITE_API_BASE_URL')
+);
+
+export const getApiOrigin = (): string => API_BASE_URL.replace(/\/api\/?$/, '');
 
 // Get auth token from localStorage
 const getAuthToken = (): string | null => {

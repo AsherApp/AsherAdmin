@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { getApiOrigin } from '../config/api';
 import { dataRuntime } from './dataRuntime';
 
 let unbindDataRuntime: (() => void) | undefined;
@@ -10,18 +11,6 @@ let teardownTimer: ReturnType<typeof setTimeout> | null = null;
 
 type LiveHandler = (payload: Record<string, unknown>) => void;
 const handlers = new Set<LiveHandler>();
-
-function getApiOrigin(): string {
-  // @ts-ignore vite env
-  const env = import.meta.env as Record<string, string | undefined>;
-  const raw = (env.VITE_API_BASE_URL || '').trim();
-  if (!raw) return '';
-  let normalized = raw.replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(normalized)) {
-    normalized = `https://${normalized}`;
-  }
-  return normalized.replace(/\/api\/?$/, '');
-}
 
 function notify(payload: Record<string, unknown>) {
   handlers.forEach((handler) => handler(payload));
