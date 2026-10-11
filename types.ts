@@ -90,13 +90,16 @@ export interface UserProfile {
   email: string;
   role: string;
   systemId: string; // The primary system they belong to
-  status: 'Active' | 'Inactive' | 'Suspended' | 'Pending Invite';
+  status: 'Active' | 'Inactive' | 'Suspended' | 'Pending Invite' | 'Access Request';
   lastActive: string;
   presence?: 'online' | 'away' | 'offline';
   lastSeenAt?: string | null;
   avatarUrl?: string;
   phone?: string;
   ticketsRaised?: number;
+  /** Set when this directory row is a public website access request (not yet invited). */
+  accessRequestId?: string;
+  accessMessage?: string | null;
 }
 
 export interface ChatThread {

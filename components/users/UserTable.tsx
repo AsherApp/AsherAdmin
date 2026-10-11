@@ -8,9 +8,19 @@ import { Avatar } from '../ui/Avatar';
 interface UserTableProps {
   users: UserProfile[];
   onSelect: (user: UserProfile) => void;
+  /** Busy access-request id while approve/reject is in flight. */
+  accessWorkingId?: string | null;
+  onApproveAccess?: (user: UserProfile) => void;
+  onDeclineAccess?: (user: UserProfile) => void;
 }
 
-const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
+const UserTable: React.FC<UserTableProps> = ({
+  users,
+  onSelect,
+  accessWorkingId = null,
+  onApproveAccess,
+  onDeclineAccess,
+}) => {
   return (
     <div className="flex-1 glass-panel rounded-3xl flex flex-col overflow-hidden">
       <div className="p-3 bg-white/20 border-b border-white/40 flex justify-between items-center backdrop-blur-sm">
@@ -26,14 +36,28 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
               <th className="p-5 font-bold uppercase tracking-wider">System Access</th>
               <th className="p-5 font-bold uppercase tracking-wider">Status</th>
               <th className="p-5 font-bold uppercase tracking-wider">Last Active</th>
+              <th className="p-5 font-bold uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => {
               const sysDetails = getSystemDetails(user.systemId);
               const SysIcon = sysDetails.icon;
+              const isAccessRequest = user.status === 'Access Request' && Boolean(user.accessRequestId);
+              const busy = accessWorkingId === user.accessRequestId;
+
               return (
-                <tr key={user.id} onClick={() => onSelect(user)} className="group border-b border-white/20 hover:bg-white/40 transition-all cursor-pointer">
+                <tr
+                  key={user.id}
+                  onClick={() => {
+                    if (!isAccessRequest) onSelect(user);
+                  }}
+                  className={`group border-b border-white/20 transition-all ${
+                    isAccessRequest
+                      ? 'bg-amber-50/40 hover:bg-amber-50/70'
+                      : 'hover:bg-white/40 cursor-pointer'
+                  }`}
+                >
                   <td className="p-5">
                     <div className="flex items-center gap-4">
                       <Avatar
@@ -44,6 +68,11 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{user.name}</p>
                         <p className="text-xs text-gray-500 font-medium">{user.email}</p>
+                        {isAccessRequest && user.accessMessage ? (
+                          <p className="mt-1 max-w-xs truncate text-[11px] text-amber-800/80">
+                            “{user.accessMessage}”
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </td>
@@ -61,12 +90,14 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                       user.status === 'Active' ? 'bg-green-100/50 text-green-700 border-green-200/50' :
                       user.status === 'Inactive' ? 'bg-gray-100/50 text-gray-600 border-gray-200/50' :
                       user.status === 'Pending Invite' ? 'bg-red-100/50 text-red-700 border-red-200/50' :
+                      user.status === 'Access Request' ? 'bg-amber-100/70 text-amber-800 border-amber-200/60' :
                       'bg-red-100/50 text-red-700 border-red-200/50'
                     }`}>
                       <span className={`w-2 h-2 rounded-full shadow-sm ${
                         user.status === 'Active' ? 'bg-green-500' :
                         user.status === 'Inactive' ? 'bg-gray-400' :
                         user.status === 'Pending Invite' ? 'bg-red-500' :
+                        user.status === 'Access Request' ? 'bg-amber-500' :
                         'bg-red-500'
                       }`}></span>
                       {user.status}
@@ -74,7 +105,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                   </td>
                   <td className="p-5">
                     <div className="flex items-center gap-2 text-sm font-mono text-gray-600">
-                      {user.status === 'Pending Invite' || user.status === 'Suspended' ? (
+                      {user.status === 'Pending Invite' || user.status === 'Suspended' || user.status === 'Access Request' ? (
                         <span>{user.lastActive}</span>
                       ) : (
                         <>
@@ -95,6 +126,30 @@ const UserTable: React.FC<UserTableProps> = ({ users, onSelect }) => {
                         </>
                       )}
                     </div>
+                  </td>
+                  <td className="p-5 text-right" onClick={(e) => e.stopPropagation()}>
+                    {isAccessRequest ? (
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onApproveAccess?.(user)}
+                          className="rounded-lg bg-gray-900 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-black disabled:opacity-50"
+                        >
+                          {busy ? '…' : 'Accept'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onDeclineAccess?.(user)}
+                          className="rounded-lg px-2.5 py-1 text-[11px] font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
               )

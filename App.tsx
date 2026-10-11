@@ -29,7 +29,6 @@ const Inbox = lazy(() => import('./components/Inbox'));
 const EmailSystem = lazy(() => import('./components/EmailSystem'));
 const Settings = lazy(() => import('./components/Settings'));
 const SupportContent = lazy(() => import('./components/SupportContent'));
-const LandlordAccessRequests = lazy(() => import('./components/LandlordAccessRequests'));
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -81,6 +80,12 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const routeTab = location.pathname.split('/').filter(Boolean)[0] || 'dashboard';
+  // Old bookmark: /landlord-access-requests → landlords directory (requests live there now).
+  useEffect(() => {
+    if (routeTab === 'landlord-access-requests') {
+      navigate('/landlords', { replace: true });
+    }
+  }, [routeTab, navigate]);
   const currentTab = ADMIN_MENU_ITEMS.some((item) => item.id === routeTab) || routeTab === 'settings' ? routeTab : 'dashboard';
   const setCurrentTab = (tab: string) => navigate(tab === 'dashboard' ? '/' : `/${tab}`);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -214,7 +219,6 @@ const DashboardLayout: React.FC = () => {
       case 'dashboard': return <Dashboard />;
       case 'systems': return <SystemMonitor />;
       case 'landlords': return <LandlordsSection />;
-      case 'landlord-access-requests': return <LandlordAccessRequests />;
       case 'vendors': return <VendorsSection />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
       case 'ad-moderation': return <AdModerationReview />;

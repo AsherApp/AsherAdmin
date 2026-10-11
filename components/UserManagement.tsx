@@ -1,46 +1,103 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserProfile } from '../types';
 import { Search, UserPlus, Filter, Loader } from 'lucide-react';
-import { getSystemDetails } from '../utils/uiHelpers';
 import UserTable from './users/UserTable';
 import AddUserModal from './users/AddUserModal';
 import UserDetailModal from './users/UserDetailModal';
 import { getAllLandlords } from '../services/userService';
+import {
+  LandlordAccessRequest,
+  approveLandlordAccessRequest,
+  getLandlordAccessRequests,
+  rejectLandlordAccessRequest,
+} from '../services/adminService';
+
+const requestToDirectoryRow = (request: LandlordAccessRequest): UserProfile => {
+  const name = [request.firstName, request.lastName].filter(Boolean).join(' ').trim();
+  return {
+    id: `access-req-${request.id}`,
+    name: name || request.email,
+    email: request.email,
+    role: 'Landlord',
+    systemId: '4',
+    status: 'Access Request',
+    lastActive: request.createdAt
+      ? `Requested ${new Date(request.createdAt).toLocaleDateString()}`
+      : 'Requested access',
+    phone: request.phoneNumber || undefined,
+    accessRequestId: request.id,
+    accessMessage: request.message,
+  };
+};
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [accessRequests, setAccessRequests] = useState<LandlordAccessRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSystem, setFilterSystem] = useState('4'); // Default to Rent Mgmt System
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [accessWorkingId, setAccessWorkingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [fallbackLink, setFallbackLink] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, [searchTerm, filterSystem]);
-
-  const loadUsers = async () => {
+  const loadDirectory = useCallback(async () => {
     try {
       setLoading(true);
-      // Fetch all users (increased limit to get all landlords)
-      const response = await getAllLandlords(1, 1000, searchTerm);
-      setUsers(response.data || []);
-      setTotal(response.total || 0);
-    } catch (error) {
-      console.error('Error loading users:', error);
+      setError(null);
+      const [landlordsResponse, pendingRequests] = await Promise.all([
+        getAllLandlords(1, 1000, searchTerm),
+        getLandlordAccessRequests('PENDING').catch(() => [] as LandlordAccessRequest[]),
+      ]);
+      setUsers(landlordsResponse.data || []);
+      setTotal(landlordsResponse.total || 0);
+      setAccessRequests(pendingRequests || []);
+    } catch (err) {
+      console.error('Error loading users:', err);
       setUsers([]);
       setTotal(0);
+      setAccessRequests([]);
+      setError('Could not load directory.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
 
-  const filteredUsers = users.filter(u => {
-    const matchesSystem = filterSystem === 'all' || u.systemId === filterSystem;
-    return matchesSystem;
-  });
+  useEffect(() => {
+    void loadDirectory();
+  }, [loadDirectory, filterSystem]);
+
+  const directoryRows = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    // If they're already in the directory (invited/active), never show Accept again.
+    const landlordEmails = new Set(
+      users.map((u) => u.email.trim().toLowerCase()).filter(Boolean)
+    );
+
+    const requestRows = accessRequests
+      .filter((r) => !landlordEmails.has(r.email.trim().toLowerCase()))
+      .map(requestToDirectoryRow)
+      .filter((row) => {
+        if (!q) return true;
+        return (
+          row.name.toLowerCase().includes(q) ||
+          row.email.toLowerCase().includes(q) ||
+          (row.phone || '').toLowerCase().includes(q)
+        );
+      });
+
+    const landlordRows = users.filter((u) => {
+      const matchesSystem = filterSystem === 'all' || u.systemId === filterSystem;
+      return matchesSystem;
+    });
+
+    // Access requests sit at the top so Accept/Decline is obvious.
+    return [...requestRows, ...landlordRows];
+  }, [accessRequests, users, filterSystem, searchTerm]);
 
   const handleAddUser = (newUser: UserProfile) => {
     setUsers([newUser, ...users]);
@@ -60,17 +117,99 @@ const UserManagement: React.FC = () => {
     setSelectedUser(null);
   };
 
+  const handleApproveAccess = async (row: UserProfile) => {
+    if (!row.accessRequestId) return;
+    if (!window.confirm(`Approve ${row.email} and send their landlord invitation?`)) return;
+    setAccessWorkingId(row.accessRequestId);
+    setNotice(null);
+    setFallbackLink(null);
+    setError(null);
+    try {
+      const result: any = await approveLandlordAccessRequest(row.accessRequestId);
+      const payload = result?.data?.data ?? result?.data ?? result;
+      const alreadyExisted = payload?.alreadyExisted === true;
+      const emailFailed = payload?.emailSent === false && !alreadyExisted;
+      setFallbackLink(emailFailed ? payload?.invitationLink ?? null : null);
+      setNotice(
+        alreadyExisted
+          ? `${row.email} already has a landlord account — cleared from the approval queue.`
+          : emailFailed
+            ? `Approved ${row.email}, but the invitation email did not send — copy the link below.`
+            : `Approved ${row.email}. Invitation sent; they now show as Pending Invite.`
+      );
+      await loadDirectory();
+    } catch (err: any) {
+      setError(err?.message || `Could not approve ${row.email}.`);
+    } finally {
+      setAccessWorkingId(null);
+    }
+  };
+
+  const handleDeclineAccess = async (row: UserProfile) => {
+    if (!row.accessRequestId) return;
+    const note = window.prompt(`Why are you declining ${row.email}?`);
+    if (note === null) return;
+    setAccessWorkingId(row.accessRequestId);
+    setNotice(null);
+    setFallbackLink(null);
+    setError(null);
+    try {
+      await rejectLandlordAccessRequest(row.accessRequestId, note || undefined);
+      setNotice(`Declined ${row.email}.`);
+      await loadDirectory();
+    } catch {
+      setError(`Could not decline ${row.email}.`);
+    } finally {
+      setAccessWorkingId(null);
+    }
+  };
+
+  const pendingAccessCount = accessRequests.length;
+
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col space-y-6 relative">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">User Directory</h2>
-          <p className="text-gray-600 text-sm mt-1 font-medium">Manage access and profiles across the ecosystem.</p>
+          <p className="text-gray-600 text-sm mt-1 font-medium">
+            Invite landlords, review access requests, and manage profiles — same list.
+          </p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="bg-red-600/90 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg backdrop-blur-sm">
           <UserPlus size={18} /> Add User
         </button>
       </div>
+
+      {pendingAccessCount > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <span className="font-bold">{pendingAccessCount}</span> access request
+          {pendingAccessCount === 1 ? '' : 's'} waiting — Accept or Decline on the rows highlighted below.
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {notice}
+        </div>
+      ) : null}
+      {fallbackLink ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="mb-2 font-medium">Set-password link (email failed)</p>
+          <code className="block break-all rounded bg-white px-2 py-1 text-xs">{fallbackLink}</code>
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(fallbackLink)}
+            className="mt-2 rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-bold text-white"
+          >
+            Copy link
+          </button>
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-4">
          <div className="relative flex-1">
@@ -82,7 +221,7 @@ const UserManagement: React.FC = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  loadUsers();
+                  void loadDirectory();
                 }
               }}
               className="glass-input w-full pl-12 pr-4 py-3 rounded-2xl text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition-all" 
@@ -108,13 +247,21 @@ const UserManagement: React.FC = () => {
       ) : (
         <>
           <div className="text-sm text-gray-600 mb-2">
-            Showing {filteredUsers.length} of {total} users
+            Showing {directoryRows.length} rows
+            {pendingAccessCount > 0 ? ` · ${pendingAccessCount} access request${pendingAccessCount === 1 ? '' : 's'}` : ''}
+            {total ? ` · ${total} invited/active landlords` : ''}
           </div>
-          <UserTable users={filteredUsers} onSelect={setSelectedUser} />
+          <UserTable
+            users={directoryRows}
+            onSelect={setSelectedUser}
+            accessWorkingId={accessWorkingId}
+            onApproveAccess={(row) => void handleApproveAccess(row)}
+            onDeclineAccess={(row) => void handleDeclineAccess(row)}
+          />
         </>
       )}
 
-      {selectedUser && (
+      {selectedUser && selectedUser.status !== 'Access Request' && (
         <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} onUpdate={handleUpdateUser} onDelete={handleDeleteUser} />
       )}
 

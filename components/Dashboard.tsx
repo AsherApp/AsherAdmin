@@ -1,12 +1,14 @@
 import { watchData } from '../services/dataRuntime';
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   AlertTriangle, 
   CheckCircle2, 
   TrendingUp,
   Activity,
-  Loader
+  Loader,
+  UserPlus,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -18,11 +20,14 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { getSystemStats, getActivityData, getSystemHealth, SystemStats, ActivityData, SystemHealth } from '../services/analyticsService';
+import { getLandlordAccessRequests } from '../services/adminService';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [backendHealth, setBackendHealth] = useState<SystemHealth | null>(null);
+  const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,14 +39,16 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const [statsData, activityData, health] = await Promise.all([
+      const [statsData, activityData, health, accessRequests] = await Promise.all([
         getSystemStats(),
         getActivityData(),
         getSystemHealth().catch(() => null),
+        getLandlordAccessRequests('PENDING').catch(() => []),
       ]);
       setStats(statsData);
       setActivityData(activityData);
       setBackendHealth(health);
+      setPendingAccessRequests(Array.isArray(accessRequests) ? accessRequests.length : 0);
     } catch (error: any) {
       setError(error?.message || 'Dashboard data could not be loaded.');
     } finally {
@@ -70,6 +77,30 @@ const Dashboard: React.FC = () => {
       </div>
 
       {error && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Some dashboard data could not refresh: {error}</div>}
+
+      {pendingAccessRequests > 0 ? (
+        <button
+          type="button"
+          onClick={() => navigate('/landlords')}
+          className="w-full rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-left shadow-sm transition hover:bg-amber-100/80"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-amber-500 p-2.5 text-white shadow">
+              <UserPlus size={20} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-amber-950">
+                {pendingAccessRequests} landlord access request
+                {pendingAccessRequests === 1 ? '' : 's'} waiting
+              </p>
+              <p className="text-xs text-amber-800/90 mt-0.5">
+                Open Landlords → Directory to Accept or Decline. Approving sends the normal invite.
+              </p>
+            </div>
+            <span className="text-xs font-bold text-amber-900 underline">Review</span>
+          </div>
+        </button>
+      ) : null}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
