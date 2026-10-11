@@ -22,7 +22,7 @@ const FileLibrary: React.FC = () => {
   // Creator State
   const [docTitle, setDocTitle] = useState('');
   const [docContent, setDocContent] = useState('');
-  const [docCategory, setDocCategory] = useState<'Template' | 'Legal' | 'FAQ' | 'Guide' | 'Book' | 'News' | 'Tutorial' | 'Handbook' | 'HowTo'>('Template');
+  const [docCategory, setDocCategory] = useState<'Template' | 'Legal' | 'FAQ' | 'Guide' | 'Book' | 'News' | 'Tutorial' | 'Handbook' | 'HowTo' | 'TenantBook' | 'Journal' | 'Law'>('Template');
   const [docSection, setDocSection] = useState('tenant-onboarding');
   const [docCountry, setDocCountry] = useState<'ALL' | 'UK' | 'NG' | 'US' | 'IE'>('ALL');
   const [docSystemId, setDocSystemId] = useState('4'); // Rent Mgmt System
@@ -41,7 +41,7 @@ const FileLibrary: React.FC = () => {
       setLoadError('');
       const documents = await getDocuments();
       const mappedFiles: FileAsset[] = documents.map((doc: Document) => {
-        const categoryMatch = doc.documentName.match(/^\[(Template|Guide|Legal|FAQ|Book|News|Tutorial|Handbook|HowTo)\]/i);
+        const categoryMatch = doc.documentName.match(/^\[(Template|Guide|Legal|FAQ|Book|News|Tutorial|Handbook|HowTo|Journal|Law)\]/i);
         return {
         id: doc.id,
         name: doc.documentName,
@@ -77,7 +77,9 @@ const FileLibrary: React.FC = () => {
                            (activeCat === 'news' && fileCategory === 'news') ||
                            (activeCat === 'tutorial' && fileCategory === 'tutorial') ||
                            (activeCat === 'handbook' && fileCategory === 'handbook') ||
-                           (activeCat === 'howto' && fileCategory === 'howto');
+                           (activeCat === 'howto' && fileCategory === 'howto') ||
+                           (activeCat === 'journal' && fileCategory === 'journal') ||
+                           (activeCat === 'law' && fileCategory === 'law');
     const matchesSystem = filterSystem === 'all' || f.systemId === filterSystem;
     return matchesSearch && matchesCategory && matchesSystem;
   });
@@ -104,10 +106,24 @@ const FileLibrary: React.FC = () => {
                             docCategory === 'News' ? '[News]' :
                             docCategory === 'Tutorial' ? '[Tutorial]' :
                             docCategory === 'Handbook' ? '[Handbook]' :
-                            docCategory === 'HowTo' ? '[HowTo]' : '';
-      // Vendor App library sections use vendor-library routing; landlord templates keep templates:*.
+                            docCategory === 'HowTo' ? '[HowTo]' :
+                            docCategory === 'TenantBook' ? '[Book]' :
+                            docCategory === 'Journal' ? '[Journal]' :
+                            docCategory === 'Law' ? '[Law]' : '';
+      // Vendor library, tenant library, and landlord templates each keep their own routing tag.
       const isVendorLibrary = docSystemId === '2' || docSection.startsWith('vendor-');
-      const routingPrefix = isVendorLibrary ? 'vendor-library' : 'templates';
+      const isTenantLibrary =
+        docSystemId === '1' ||
+        docCategory === 'TenantBook' ||
+        docCategory === 'Journal' ||
+        docCategory === 'Law' ||
+        docSection === 'journals' ||
+        docSection === 'laws';
+      const routingPrefix = isVendorLibrary
+        ? 'vendor-library'
+        : isTenantLibrary
+          ? 'tenant-library'
+          : 'templates';
       const routingSuffix = docCountry === 'ALL'
         ? `[${routingPrefix}:${docSection}]`
         : `[${routingPrefix}:${docSection}:${docCountry}]`;
@@ -161,6 +177,8 @@ const FileLibrary: React.FC = () => {
     if (category === 'Tutorial') return <Smartphone className="text-indigo-600" />;
     if (category === 'HowTo') return <ListOrdered className="text-sky-600" />;
     if (category === 'Handbook') return <BookOpen className="text-emerald-700" />;
+    if (category === 'Journal') return <BookOpen className="text-rose-700" />;
+    if (category === 'Law') return <Briefcase className="text-amber-700" />;
     if (category === 'Legal') return <Briefcase className="text-amber-600" />;
     if (category === 'FAQ') return <HelpCircle className="text-green-500" />;
     return <FileText className="text-gray-500" />;
@@ -232,6 +250,15 @@ const FileLibrary: React.FC = () => {
                         } else if (next === 'Handbook') {
                           setDocSystemId('2');
                           setDocSection('handbooks');
+                        } else if (next === 'TenantBook') {
+                          setDocSystemId('1');
+                          setDocSection('books');
+                        } else if (next === 'Journal') {
+                          setDocSystemId('1');
+                          setDocSection('journals');
+                        } else if (next === 'Law') {
+                          setDocSystemId('1');
+                          setDocSection('laws');
                         }
                       }}
                       className="glass-input py-1.5 px-3 rounded-lg text-sm font-bold cursor-pointer bg-white/40"
@@ -245,6 +272,9 @@ const FileLibrary: React.FC = () => {
                        <option value="Handbook">Vendor Handbook</option>
                        <option value="Book">Vendor Book</option>
                        <option value="News">Vendor News</option>
+                       <option value="TenantBook">Tenant book</option>
+                       <option value="Journal">Tenant journal</option>
+                       <option value="Law">Tenant law</option>
                     </select>
                  </div>
                  <div className="flex items-center gap-2">
@@ -257,8 +287,10 @@ const FileLibrary: React.FC = () => {
                        <option value="tutorials">Vendor tutorials</option>
                        <option value="howtos">Vendor how-tos</option>
                        <option value="handbooks">Vendor handbooks</option>
-                       <option value="books">Vendor books</option>
+                       <option value="books">Books</option>
                        <option value="news">Vendor news (goods &amp; services)</option>
+                       <option value="journals">Tenant journals</option>
+                       <option value="laws">Tenant laws</option>
                     </select>
                  </div>
                  <div className="flex items-center gap-2">
@@ -340,7 +372,9 @@ const FileLibrary: React.FC = () => {
                { id: 'tutorial', label: 'Vendor Tutorials', icon: Smartphone },
                { id: 'howto', label: 'Vendor How-tos', icon: ListOrdered },
                { id: 'handbook', label: 'Vendor Handbooks', icon: BookOpen },
-               { id: 'book', label: 'Vendor Books', icon: BookOpen },
+               { id: 'book', label: 'Books', icon: BookOpen },
+               { id: 'journal', label: 'Tenant journals', icon: BookOpen },
+               { id: 'law', label: 'Tenant laws', icon: Briefcase },
                { id: 'news', label: 'Vendor News', icon: Globe },
             ].map(cat => (
                <button 

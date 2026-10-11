@@ -77,7 +77,7 @@ export interface FileAsset {
   type: string;
   uploadedAt: string;
   // New fields for Asher Admin
-  category: 'Legal' | 'Invoice' | 'Image' | 'Other' | 'Template' | 'FAQ' | 'Guide' | 'Book' | 'News' | 'Tutorial' | 'Handbook' | 'HowTo';
+  category: 'Legal' | 'Invoice' | 'Image' | 'Other' | 'Template' | 'FAQ' | 'Guide' | 'Book' | 'News' | 'Tutorial' | 'Handbook' | 'HowTo' | 'Journal' | 'Law';
   systemId: string; // '1', '2', '3', '4', '5' or 'all'
   content?: string; // For created docs
   status?: 'Draft' | 'Published';
