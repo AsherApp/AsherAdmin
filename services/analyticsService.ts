@@ -34,8 +34,27 @@ export interface DeploymentHealth {
   processUptimeSeconds?: number;
 }
 
+export interface SiteVisitPage {
+  path: string;
+  label: string;
+  visits: number;
+}
+
+export interface SiteVisitPlace {
+  label: string;
+  visits: number;
+}
+
+export interface SiteVisitorReport {
+  today: number;
+  last7Days: number;
+  pages: SiteVisitPage[];
+  places: SiteVisitPlace[];
+}
+
 export interface SystemHealth {
   systems: DeploymentHealth[];
+  visitors?: SiteVisitorReport;
   checkedAt: string;
 }
 

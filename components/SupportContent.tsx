@@ -48,7 +48,7 @@ const SupportContent: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQ[]>([]);
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
-  const [faqForm, setFaqForm] = useState({ question: '', answer: '', category: 'general', order: 0, isPublished: true });
+  const [faqForm, setFaqForm] = useState({ question: '', answer: '', category: 'general', order: 0, isPublished: true, systemId: '3' });
 
   // Help Article State
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
@@ -127,7 +127,7 @@ const SupportContent: React.FC = () => {
     try {
       await createFAQ(faqForm);
       setShowFAQModal(false);
-      setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true });
+      setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true, systemId: '3' });
       loadData();
     } catch (error) {
       console.error('Error creating FAQ:', error);
@@ -140,7 +140,7 @@ const SupportContent: React.FC = () => {
       await updateFAQ(editingFAQ.id, faqForm);
       setShowFAQModal(false);
       setEditingFAQ(null);
-      setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true });
+      setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true, systemId: '3' });
       loadData();
     } catch (error) {
       console.error('Error updating FAQ:', error);
@@ -164,7 +164,8 @@ const SupportContent: React.FC = () => {
       answer: faq.answer,
       category: faq.category,
       order: faq.order,
-      isPublished: faq.isPublished
+      isPublished: faq.isPublished,
+      systemId: faq.systemId || '3',
     });
     setShowFAQModal(true);
   };
@@ -377,7 +378,7 @@ const SupportContent: React.FC = () => {
           onClick={() => {
             if (activeTab === 'faq') {
               setEditingFAQ(null);
-              setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true });
+              setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true, systemId: '3' });
               setShowFAQModal(true);
             } else if (activeTab === 'help-articles') {
               setEditingArticle(null);
@@ -430,6 +431,9 @@ const SupportContent: React.FC = () => {
                               </span>
                               <span className="px-2 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700">
                                 {faq.category}
+                              </span>
+                              <span className="px-2 py-1 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-700">
+                                {faq.systemId === '3' ? 'Listing Website' : faq.systemId === '1' ? 'Tenant Portal' : faq.systemId === '2' ? 'Vendor App' : faq.systemId === '4' ? 'Rent Mgmt' : faq.systemId === '5' ? 'Admin' : 'Not on a site'}
                               </span>
                             </div>
                             <p className="text-gray-600 text-sm mb-2">{faq.answer}</p>
@@ -685,6 +689,20 @@ const SupportContent: React.FC = () => {
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Shows on</label>
+                <select
+                  value={faqForm.systemId}
+                  onChange={(e) => setFaqForm({ ...faqForm, systemId: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="3">Listing Website</option>
+                  <option value="1">Tenant Portal</option>
+                  <option value="2">Vendor App</option>
+                  <option value="4">Rent Mgmt System</option>
+                  <option value="5">Admin</option>
+                </select>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -699,7 +717,7 @@ const SupportContent: React.FC = () => {
                   onClick={() => {
                     setShowFAQModal(false);
                     setEditingFAQ(null);
-                    setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true });
+                    setFaqForm({ question: '', answer: '', category: 'general', order: 0, isPublished: true, systemId: '3' });
                   }}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
                 >

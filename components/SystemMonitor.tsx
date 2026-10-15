@@ -1,7 +1,7 @@
 import { watchData } from '../services/dataRuntime';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertCircle, CheckCircle2, Clock3, ExternalLink, Globe2, Loader, RefreshCw, Server, Smartphone } from 'lucide-react';
-import { DeploymentHealth, getSystemHealth } from '../services/analyticsService';
+import { DeploymentHealth, getSystemHealth, SiteVisitorReport } from '../services/analyticsService';
 
 const statusLabel: Record<DeploymentHealth['status'], string> = {
   OPERATIONAL: 'Up',
@@ -26,6 +26,7 @@ const formatDuration = (seconds?: number) => {
 
 const SystemMonitor: React.FC = () => {
   const [systems, setSystems] = useState<DeploymentHealth[]>([]);
+  const [visitors, setVisitors] = useState<SiteVisitorReport | null>(null);
   const [checkedAt, setCheckedAt] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,6 +37,7 @@ const SystemMonitor: React.FC = () => {
     try {
       const health = await getSystemHealth();
       setSystems(health.systems || []);
+      setVisitors(health.visitors || null);
       setCheckedAt(health.checkedAt);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Deployment checks could not be completed.');
@@ -56,7 +58,7 @@ const SystemMonitor: React.FC = () => {
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-red-600">Live deployment checks</p>
           <h2 className="mt-1 text-3xl font-bold tracking-tight text-gray-900">System health</h2>
-          <p className="mt-1 text-sm font-medium text-gray-600">Live checks against the API, the database, Redis, the public sites, and who is using the tenant and vendor apps.</p>
+          <p className="mt-1 text-sm font-medium text-gray-600">Live checks against the API, the database, Redis, and the public sites, plus who is using the tenant and vendor apps and which Asher Living pages people open.</p>
         </div>
         <button onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-red-700 disabled:opacity-60">
           {loading ? <Loader size={17} className="animate-spin" /> : <RefreshCw size={17} />} Run diagnostics
@@ -93,7 +95,38 @@ const SystemMonitor: React.FC = () => {
         </div>
       )}
 
-      <div className="flex gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800"><Clock3 className="mt-0.5 shrink-0" size={18} /><p>These checks run when you open the page and again every minute. A tenant or vendor card counts people with a live session, not a guessed uptime percentage.</p></div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Asher Living pages</p>
+          <div className="mt-3 flex gap-6">
+            <div><p className="text-3xl font-bold text-gray-900">{visitors?.today ?? 0}</p><p className="text-sm text-gray-500">Visitors today</p></div>
+            <div><p className="text-3xl font-bold text-gray-900">{visitors?.last7Days ?? 0}</p><p className="text-sm text-gray-500">Last 7 days</p></div>
+          </div>
+          <ol className="mt-5 space-y-2">
+            {(visitors?.pages.length ? visitors.pages : []).map((page) => (
+              <li key={page.path} className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-gray-800">{page.label}</span>
+                <span className="tabular-nums text-gray-500">{page.visits}</span>
+              </li>
+            ))}
+            {!visitors?.pages.length && <li className="text-sm text-gray-500">No page visits recorded yet.</li>}
+          </ol>
+        </section>
+        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Where visitors are</p>
+          <ol className="mt-5 space-y-2">
+            {(visitors?.places.length ? visitors.places : []).map((place) => (
+              <li key={place.label} className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-semibold text-gray-800">{place.label}</span>
+                <span className="tabular-nums text-gray-500">{place.visits}</span>
+              </li>
+            ))}
+            {!visitors?.places.length && <li className="text-sm text-gray-500">No places recorded yet.</li>}
+          </ol>
+        </section>
+      </div>
+
+      <div className="flex gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800"><Clock3 className="mt-0.5 shrink-0" size={18} /><p>Health checks run when you open this page and again when the screen refreshes. A tenant or vendor card counts signed-in people. Asher Living counts one visit per browser, per page, per day, and keeps the city and country only. It does not store a name or an IP address.</p></div>
     </div>
   );
 };

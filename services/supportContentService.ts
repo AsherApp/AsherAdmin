@@ -8,6 +8,7 @@ export interface FAQ {
   category: string;
   order: number;
   isPublished: boolean;
+  systemId?: string;
   views: number;
   createdAt: string;
   updatedAt: string;
@@ -140,6 +141,7 @@ export const createFAQ = async (data: {
   category: string;
   order?: number;
   isPublished?: boolean;
+  systemId?: string;
 }): Promise<FAQ> => {
   const response = await api.post('/support-content/faqs', data);
   return response.data;
@@ -151,6 +153,7 @@ export const updateFAQ = async (id: string, data: {
   category?: string;
   order?: number;
   isPublished?: boolean;
+  systemId?: string;
 }): Promise<FAQ> => {
   const response = await api.patch(`/support-content/faqs/${id}`, data);
   return response.data;
