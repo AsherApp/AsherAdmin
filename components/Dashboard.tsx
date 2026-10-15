@@ -9,6 +9,8 @@ import {
   Activity,
   Loader,
   UserPlus,
+  Building2,
+  Home,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -81,7 +83,7 @@ const Dashboard: React.FC = () => {
       {pendingAccessRequests > 0 ? (
         <button
           type="button"
-          onClick={() => navigate('/landlords')}
+          onClick={() => navigate('/users?tab=landlords')}
           className="w-full rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-left shadow-sm transition hover:bg-amber-100/80"
         >
           <div className="flex items-center gap-3">
@@ -94,7 +96,7 @@ const Dashboard: React.FC = () => {
                 {pendingAccessRequests === 1 ? '' : 's'} waiting
               </p>
               <p className="text-xs text-amber-800/90 mt-0.5">
-                Open Landlords → Directory to Accept or Decline. Approving sends the normal invite.
+                Open Users → Landlords to Accept or Decline. Approving sends the normal invite.
               </p>
             </div>
             <span className="text-xs font-bold text-amber-900 underline">Review</span>
@@ -103,7 +105,7 @@ const Dashboard: React.FC = () => {
       ) : null}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="glass-panel p-6 rounded-3xl flex items-center justify-between relative overflow-hidden group transition-transform hover:-translate-y-1 hover:shadow-xl">
           <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
           <div>
@@ -116,6 +118,28 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl shadow-lg shadow-red-500/30">
             <Users size={24} />
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-3xl flex items-center justify-between relative overflow-hidden group transition-transform hover:-translate-y-1 hover:shadow-xl">
+          <div>
+            <p className="text-sm text-gray-500 font-semibold uppercase tracking-wider">Tenants</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{stats?.totalTenants || 0}</h3>
+            <span className="text-xs text-gray-500 font-medium mt-2 block px-1">Current leases</span>
+          </div>
+          <div className="p-4 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-2xl shadow-lg">
+            <Home size={24} />
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-3xl flex items-center justify-between relative overflow-hidden group transition-transform hover:-translate-y-1 hover:shadow-xl">
+          <div>
+            <p className="text-sm text-gray-500 font-semibold uppercase tracking-wider">Properties</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{stats?.totalProperties || 0}</h3>
+            <span className="text-xs text-gray-500 font-medium mt-2 block px-1">Homes on Asher</span>
+          </div>
+          <div className="p-4 bg-gradient-to-br from-red-700 to-red-900 text-white rounded-2xl shadow-lg">
+            <Building2 size={24} />
           </div>
         </div>
 
@@ -195,19 +219,19 @@ const Dashboard: React.FC = () => {
 
         {/* Direct deployment status; detailed checks live in System Monitor. */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col">
-          <h3 className="font-bold text-gray-800 mb-6 text-lg">Deployment Status</h3>
+          <h3 className="font-bold text-gray-800 mb-6 text-lg">System status</h3>
           {deployments.length ? (
             <div className="flex-1 flex flex-col justify-center gap-4">
               <div className="flex items-center gap-3">
                 <span className={`w-3 h-3 rounded-full ${healthyDeployments === deployments.length ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`}></span>
                 <span className="text-lg font-bold text-gray-800">{healthyDeployments} of {deployments.length} operational</span>
               </div>
-              <div className="space-y-2">{deployments.slice(0, 4).map((system) => <div key={system.id} className="flex items-center justify-between rounded-xl bg-white/40 px-3 py-2 text-xs"><span className="font-semibold text-gray-700">{system.name}</span><span className={system.status === 'OPERATIONAL' ? 'font-bold text-emerald-700' : system.status === 'NOT_CONFIGURED' ? 'font-bold text-gray-500' : 'font-bold text-amber-700'}>{system.status.replace('_', ' ')}</span></div>)}</div>
-              <p className="text-xs text-gray-400 font-medium">Current reachability only; open System Monitor for providers, latency and configuration gaps.</p>
+              <div className="space-y-2">{deployments.slice(0, 4).map((system) => <div key={system.id} className="flex items-center justify-between rounded-xl bg-white/40 px-3 py-2 text-xs"><span className="font-semibold text-gray-700">{system.name}</span><span className={system.status === 'OPERATIONAL' ? 'font-bold text-emerald-700' : system.status === 'DOWN' ? 'font-bold text-red-700' : 'font-bold text-amber-700'}>{system.status === 'OPERATIONAL' ? 'Up' : system.status === 'DOWN' ? 'Down' : 'Needs a look'}</span></div>)}</div>
+              <p className="text-xs text-gray-400 font-medium">Live checks. Open System Monitor for the database, Redis, sites, and app use.</p>
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm font-medium">
-              Backend status unavailable
+              System status is not available right now
             </div>
           )}
         </div>
@@ -215,40 +239,43 @@ const Dashboard: React.FC = () => {
       
       {/* Recent Activity Mini List */}
       <div className="glass-panel p-6 rounded-3xl">
-         <h3 className="font-bold text-gray-800 mb-4 text-lg">Recent System Alerts</h3>
+         <h3 className="font-bold text-gray-800 mb-4 text-lg">What needs you</h3>
          <div className="space-y-4">
             {stats && stats.openTickets > 0 && (
-               <div className="flex items-center justify-between p-4 bg-red-50/50 backdrop-blur-sm rounded-2xl border border-red-100/50 hover:bg-red-50/80 transition-colors">
+               <button type="button" onClick={() => navigate('/tickets')} className="w-full flex items-center justify-between p-4 bg-red-50/50 backdrop-blur-sm rounded-2xl border border-red-100/50 hover:bg-red-50/80 transition-colors text-left">
                   <div className="flex items-center gap-4">
                      <div className="w-3 h-3 rounded-full bg-red-600 animate-pulse shadow-[0_0_12px_rgba(220,38,38,0.5)]"></div>
                      <span className="text-sm font-semibold text-gray-800">
-                        {stats.openTickets} Open Ticket{stats.openTickets !== 1 ? 's' : ''} in Rent Management System
+                        {stats.openTickets} open support ticket{stats.openTickets !== 1 ? 's' : ''}
                      </span>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
-               </div>
+                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Open</span>
+               </button>
             )}
             {stats && stats.unreadEmails > 0 && (
-               <div className="flex items-center justify-between p-4 bg-blue-50/50 backdrop-blur-sm rounded-2xl border border-blue-100/50 hover:bg-blue-50/80 transition-colors">
+               <button type="button" onClick={() => navigate('/email')} className="w-full flex items-center justify-between p-4 bg-blue-50/50 backdrop-blur-sm rounded-2xl border border-blue-100/50 hover:bg-blue-50/80 transition-colors text-left">
                   <div className="flex items-center gap-4">
                      <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.4)]"></div>
                      <span className="text-sm font-semibold text-gray-800">
-                        {stats.unreadEmails} Unread Email{stats.unreadEmails !== 1 ? 's' : ''}
+                        {stats.unreadEmails} unread mail{stats.unreadEmails !== 1 ? 's' : ''}
                      </span>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
-               </div>
+                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Open</span>
+               </button>
             )}
             {deployments.length > 0 && (
-               <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/60 hover:bg-white/60 transition-colors">
+               <button type="button" onClick={() => navigate('/systems')} className="w-full flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-2xl border border-white/60 hover:bg-white/60 transition-colors text-left">
                   <div className="flex items-center gap-4">
                      <div className={`w-3 h-3 rounded-full ${healthyDeployments === deployments.length ? 'bg-green-500' : 'bg-amber-500'}`}></div>
                      <span className="text-sm font-semibold text-gray-800">
-                        Deployment check: {healthyDeployments} operational, {deployments.length - healthyDeployments} need attention or configuration
+                        {healthyDeployments} of {deployments.length} checks are up
                      </span>
                   </div>
-                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Just now</span>
-               </div>
+                  <span className="text-xs font-medium text-gray-500 bg-white/60 px-3 py-1 rounded-full">Open</span>
+               </button>
+            )}
+            {stats && stats.openTickets === 0 && stats.unreadEmails === 0 && deployments.length === 0 && (
+              <p className="text-sm text-gray-500">Nothing is waiting.</p>
             )}
          </div>
       </div>

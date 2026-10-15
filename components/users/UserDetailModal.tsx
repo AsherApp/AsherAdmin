@@ -380,7 +380,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                <div className="flex gap-8 h-full pt-4">
                   <button onClick={() => setActiveTab('portfolio')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'portfolio' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Property</button>
                   <button onClick={() => setActiveTab('tickets')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'tickets' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Tickets</button>
-                  <button onClick={() => setActiveTab('settings')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'settings' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Settings</button>
+                  <button onClick={() => setActiveTab('settings')} className={`h-full border-b-2 px-2 text-sm font-bold ${activeTab === 'settings' ? 'border-red-600 text-red-700' : 'border-transparent text-gray-500'}`}>Manage</button>
                </div>
                <button onClick={onClose} className="text-gray-500 hover:text-red-600 p-2"><X size={24} /></button>
             </div>
@@ -513,11 +513,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
                           <Mail size={20} className="text-amber-600" /> Pending Invitation
                         </h3>
                         <p className="text-sm text-gray-600 mb-6">
-                          This user has not activated their account on the{' '}
-                          <a href="https://asherlanlord.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
-                            Rent Management System
-                          </a>{' '}
-                          yet. Resend the email, share a direct link, or set a temporary password they can use to log in at asherlanlord.vercel.app.
+                          This person has not opened the landlord app yet. Resend the email, share a link, or set a temporary password they can use to sign in.
                         </p>
 
                         {inviteError && (

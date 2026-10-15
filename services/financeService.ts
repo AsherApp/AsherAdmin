@@ -91,6 +91,8 @@ export const getPlatformTransactions = async (params: {
   type?: string;
   status?: string;
   q?: string;
+  from?: string;
+  to?: string;
 } = {}): Promise<Paged<PlatformTransactionRow>> => {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
@@ -100,6 +102,8 @@ export const getPlatformTransactions = async (params: {
   if (params.type) query.set('type', params.type);
   if (params.status) query.set('status', params.status);
   if (params.q) query.set('q', params.q);
+  if (params.from) query.set('from', params.from);
+  if (params.to) query.set('to', params.to);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const response = await api.get(`/admin/transactions${suffix}`);
   return unwrap<Paged<PlatformTransactionRow>>(response);

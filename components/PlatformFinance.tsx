@@ -8,6 +8,7 @@ import {
   PlatformTransactionRow,
   WalletOverview,
 } from '../services/financeService';
+import { moneyLabel } from '../utils/moneyLabels';
 
 const money = (amount: number, currency?: string | null) => {
   const code = (currency || 'GBP').toUpperCase();
@@ -58,6 +59,9 @@ const PlatformFinance: React.FC = () => {
   const [currency, setCurrency] = useState('');
   const [reference, setReference] = useState('');
   const [type, setType] = useState('');
+  const [status, setStatus] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -75,6 +79,9 @@ const PlatformFinance: React.FC = () => {
           currency: currency || undefined,
           reference: reference || undefined,
           type: type || undefined,
+          status: status || undefined,
+          from: from || undefined,
+          to: to || undefined,
         }),
       ]);
       setOverview(wallet);
@@ -87,7 +94,7 @@ const PlatformFinance: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, q, currency, reference, type]);
+  }, [page, q, currency, reference, type, status, from, to]);
 
   useEffect(() => {
     void load();
@@ -98,10 +105,10 @@ const PlatformFinance: React.FC = () => {
       <div>
         <h2 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-gray-800">
           <Wallet className="text-red-600" />
-          Platform finance
+          Money moving through Asher
         </h2>
         <p className="mt-1 text-sm font-medium text-gray-600">
-          Admin wallet balances and every transaction moving through Asher.
+          What Asher is holding, and every payment in or out.
         </p>
       </div>
 
@@ -125,7 +132,7 @@ const PlatformFinance: React.FC = () => {
                 className="rounded-3xl border border-white/60 bg-white/80 p-5 shadow-xl shadow-red-500/5 backdrop-blur"
               >
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  {wallet.currency} wallet
+                  {wallet.currency} balance
                 </p>
                 <p className="mt-2 text-2xl font-bold text-gray-800">
                   {money(wallet.balance, wallet.currency)}
@@ -143,12 +150,12 @@ const PlatformFinance: React.FC = () => {
           </section>
 
           <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
-            <h3 className="text-lg font-bold text-gray-800">Revenue by type</h3>
+            <h3 className="text-lg font-bold text-gray-800">Where the money came from</h3>
             <div className="mt-4 overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
-                    <th className="pb-2">Reference</th>
+                    <th className="pb-2">Kind</th>
                     <th className="pb-2">Currency</th>
                     <th className="pb-2">Count</th>
                     <th className="pb-2">Amount</th>
@@ -158,13 +165,13 @@ const PlatformFinance: React.FC = () => {
                   {(overview?.byReference || []).length === 0 ? (
                     <tr>
                       <td colSpan={4} className="py-4 text-gray-500">
-                        No Admin credits yet.
+                        Nothing has been paid to Asher yet.
                       </td>
                     </tr>
                   ) : (
                     overview?.byReference.map((row) => (
                       <tr key={`${row.reference}-${row.currency}`} className="border-t border-gray-100">
-                        <td className="py-2 font-medium text-gray-800">{row.reference}</td>
+                        <td className="py-2 font-medium text-gray-800">{moneyLabel(row.reference)}</td>
                         <td className="py-2 text-gray-600">{row.currency}</td>
                         <td className="py-2 text-gray-600">{row.count}</td>
                         <td className="py-2 font-semibold text-gray-800">
@@ -179,17 +186,17 @@ const PlatformFinance: React.FC = () => {
           </section>
 
           <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
-            <h3 className="text-lg font-bold text-gray-800">Latest Admin credits</h3>
+            <h3 className="text-lg font-bold text-gray-800">Latest money in</h3>
             <div className="mt-4 space-y-2">
               {ledger.length === 0 ? (
-                <p className="text-sm text-gray-500">No wallet credits yet.</p>
+                <p className="text-sm text-gray-500">No money has come in yet.</p>
               ) : (
                 ledger.map((row) => (
                   <div key={row.id} className="flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">{row.description || row.reference}</p>
+                      <p className="text-sm font-medium text-gray-800">{row.description || moneyLabel(row.reference)}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(row.createdAt).toLocaleString()} · {row.reference}
+                        {new Date(row.createdAt).toLocaleString()} · {moneyLabel(row.reference)}
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-emerald-700">
@@ -204,7 +211,7 @@ const PlatformFinance: React.FC = () => {
           <section className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-500/5 backdrop-blur">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">All platform transactions</h3>
+                <h3 className="text-lg font-bold text-gray-800">All payments</h3>
                 <p className="text-sm text-gray-500">{total} records</p>
               </div>
               <button
@@ -215,7 +222,7 @@ const PlatformFinance: React.FC = () => {
               </button>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <label className="relative xl:col-span-2">
                 <Search className="absolute left-3 top-9 h-4 w-4 text-gray-400" />
                 <Field label="Search" value={q} onChange={setQ}>
@@ -256,11 +263,26 @@ const PlatformFinance: React.FC = () => {
                   className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-red-400"
                 >
                   <option value="">All</option>
-                  <option value="CREDIT">Credit</option>
-                  <option value="DEBIT">Debit</option>
+                  <option value="CREDIT">Money in</option>
+                  <option value="DEBIT">Money out</option>
                 </select>
               </Field>
-              <Field label="Reference" value={reference} onChange={(v) => { setPage(1); setReference(v); }}>
+              <Field label="Status" value={status} onChange={(v) => { setPage(1); setStatus(v); }}>
+                <select
+                  value={status}
+                  onChange={(e) => {
+                    setPage(1);
+                    setStatus(e.target.value);
+                  }}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-red-400"
+                >
+                  <option value="">All</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </Field>
+              <Field label="Kind" value={reference} onChange={(v) => { setPage(1); setReference(v); }}>
                 <select
                   value={reference}
                   onChange={(e) => {
@@ -279,7 +301,27 @@ const PlatformFinance: React.FC = () => {
                   <option value="RENT_PAYMENT">Rent</option>
                   <option value="FUND_WALLET">Top-up</option>
                   <option value="WITHDRAWAL">Withdrawal</option>
+                  <option value="APPLICATION_FEE">Application fee</option>
+                  <option value="LATE_FEE">Late fee</option>
+                  <option value="BILL_PAYMENT">Bill</option>
+                  <option value="LANDLORD_PAYOUT">Landlord payout</option>
                 </select>
+              </Field>
+              <Field label="From" value={from} onChange={(v) => { setPage(1); setFrom(v); }}>
+                <input
+                  type="date"
+                  value={from}
+                  onChange={(e) => { setPage(1); setFrom(e.target.value); }}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-red-400"
+                />
+              </Field>
+              <Field label="To" value={to} onChange={(v) => { setPage(1); setTo(v); }}>
+                <input
+                  type="date"
+                  value={to}
+                  onChange={(e) => { setPage(1); setTo(e.target.value); }}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-red-400"
+                />
               </Field>
             </div>
 
@@ -289,8 +331,8 @@ const PlatformFinance: React.FC = () => {
                   <tr className="text-left text-xs uppercase tracking-wide text-gray-500">
                     <th className="pb-2">When</th>
                     <th className="pb-2">User</th>
-                    <th className="pb-2">Type</th>
-                    <th className="pb-2">Reference</th>
+                    <th className="pb-2">Direction</th>
+                    <th className="pb-2">Kind</th>
                     <th className="pb-2">Amount</th>
                     <th className="pb-2">Status</th>
                   </tr>
@@ -320,11 +362,11 @@ const PlatformFinance: React.FC = () => {
                                 : 'bg-amber-50 text-amber-700'
                             }`}
                           >
-                            {row.type}
+                            {moneyLabel(row.type)}
                           </span>
                         </td>
                         <td className="py-2">
-                          <p className="font-medium text-gray-800">{row.reference}</p>
+                          <p className="font-medium text-gray-800">{moneyLabel(row.reference)}</p>
                           <p className="max-w-xs truncate text-xs text-gray-500">
                             {row.description || row.referenceId}
                           </p>
@@ -332,7 +374,7 @@ const PlatformFinance: React.FC = () => {
                         <td className="py-2 font-semibold text-gray-800">
                           {money(row.amount, row.currency)}
                         </td>
-                        <td className="py-2 text-gray-600">{row.status}</td>
+                        <td className="py-2 text-gray-600">{moneyLabel(row.status)}</td>
                       </tr>
                     ))
                   )}

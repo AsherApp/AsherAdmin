@@ -1,5 +1,5 @@
 import { watchData } from './services/dataRuntime';
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar, { ADMIN_MENU_ITEMS } from './components/Sidebar';
 import Login from './pages/Login';
@@ -12,18 +12,17 @@ import {
   connectAdminNotifications,
   disconnectAdminNotifications,
   subscribeAdminLiveNotifications,
+  subscribeAdminSocketStatus,
 } from './services/notificationSocket';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const SystemMonitor = lazy(() => import('./components/SystemMonitor'));
 const TicketSystem = lazy(() => import('./components/TicketSystem'));
 const FileLibrary = lazy(() => import('./components/FileLibrary'));
-const LandlordsSection = lazy(() => import('./components/LandlordsSection'));
-const VendorsSection = lazy(() => import('./components/VendorsSection'));
+const UsersSection = lazy(() => import('./components/UsersSection'));
 const ListingMonetizationConfig = lazy(() => import('./components/ListingMonetizationConfig'));
 const AdModerationReview = lazy(() => import('./components/AdModerationReview'));
-const PlatformFinance = lazy(() => import('./components/PlatformFinance'));
-const FinancialReports = lazy(() => import('./components/FinancialReports'));
+const FinanceSection = lazy(() => import('./components/FinanceSection'));
 const PropertyComplianceOverview = lazy(() => import('./components/PropertyComplianceOverview'));
 const Inbox = lazy(() => import('./components/Inbox'));
 const EmailSystem = lazy(() => import('./components/EmailSystem'));
@@ -80,13 +79,22 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const routeTab = location.pathname.split('/').filter(Boolean)[0] || 'dashboard';
-  // Old bookmark: /landlord-access-requests → landlords directory (requests live there now).
   useEffect(() => {
-    if (routeTab === 'landlord-access-requests') {
-      navigate('/landlords', { replace: true });
+    if (routeTab === 'landlord-access-requests' || routeTab === 'landlords') {
+      navigate('/users?tab=landlords', { replace: true });
+    } else if (routeTab === 'vendors') {
+      navigate('/users?tab=vendors', { replace: true });
+    } else if (routeTab === 'financial-reports') {
+      navigate('/finance?tab=summary', { replace: true });
     }
   }, [routeTab, navigate]);
-  const currentTab = ADMIN_MENU_ITEMS.some((item) => item.id === routeTab) || routeTab === 'settings' ? routeTab : 'dashboard';
+  const currentTab = routeTab === 'landlords' || routeTab === 'vendors' || routeTab === 'landlord-access-requests'
+    ? 'users'
+    : routeTab === 'financial-reports'
+      ? 'finance'
+      : ADMIN_MENU_ITEMS.some((item) => item.id === routeTab) || routeTab === 'settings'
+        ? routeTab
+        : 'dashboard';
   const setCurrentTab = (tab: string) => navigate(tab === 'dashboard' ? '/' : `/${tab}`);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -100,6 +108,9 @@ const DashboardLayout: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [toast, setToast] = useState<AppNotification | null>(null);
+  const seenNotificationIds = useRef(new Set<string>());
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -119,6 +130,7 @@ const DashboardLayout: React.FC = () => {
       const response = await getAllNotifications();
       setNotificationError('');
       const converted = response.notifications.map(convertNotification);
+      converted.forEach((item) => seenNotificationIds.current.add(item.id));
       setNotifications(converted);
       setNextCursor(response.nextCursor ?? null);
       setUnreadCount(response.unreadCount);
@@ -144,10 +156,12 @@ const DashboardLayout: React.FC = () => {
 
     const unsubscribe = subscribeAdminLiveNotifications((payload) => {
       const live: AppNotification = {
-        id: String(payload.id ?? Date.now()),
-        type: mapCategoryToType(payload.category as string | undefined),
-        title: String(payload.title ?? 'Notification'),
-        message: String(payload.message ?? ''),
+        id: String(payload.id ?? `${Date.now()}-${Math.random()}`),
+        type: mapCategoryToType(
+          (payload.category as string | undefined) || (payload.type as string | undefined)
+        ),
+        title: String(payload.title ?? payload.subject ?? 'New alert'),
+        message: String(payload.message ?? payload.body ?? ''),
         timestamp: formatTimestamp(
           String(payload.timestamp ?? payload.createdAt ?? new Date().toISOString())
         ),
@@ -156,18 +170,27 @@ const DashboardLayout: React.FC = () => {
           (payload.actionUrl as string | undefined) ??
           (payload.route as string | undefined),
       };
-      setNotifications((prev) => {
-        if (prev.some((n) => n.id === live.id)) return prev;
-        return [live, ...prev];
-      });
+      if (seenNotificationIds.current.has(live.id)) return;
+      seenNotificationIds.current.add(live.id);
+      setUnreadCount((count) => count + 1);
+      setToast(live);
+      setNotifications((prev) => [live, ...prev.filter((item) => item.id !== live.id)]);
     });
+    const unsubscribeStatus = subscribeAdminSocketStatus(setLiveConnected);
 
     return () => {
       stopPoll();
       unsubscribe();
+      unsubscribeStatus();
       disconnectAdminNotifications();
     };
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -218,12 +241,10 @@ const DashboardLayout: React.FC = () => {
     switch (currentTab) {
       case 'dashboard': return <Dashboard />;
       case 'systems': return <SystemMonitor />;
-      case 'landlords': return <LandlordsSection />;
-      case 'vendors': return <VendorsSection />;
+      case 'users': return <UsersSection />;
       case 'listing-monetization': return <ListingMonetizationConfig />;
       case 'ad-moderation': return <AdModerationReview />;
-      case 'finance': return <PlatformFinance />;
-      case 'financial-reports': return <FinancialReports />;
+      case 'finance': return <FinanceSection />;
       case 'compliance': return <PropertyComplianceOverview />;
       case 'tickets': return <TicketSystem />;
       case 'inbox': return <Inbox />;
@@ -270,6 +291,21 @@ const DashboardLayout: React.FC = () => {
          </div>
       </div>
 
+      {/* Live alert */}
+      {toast && (
+        <button
+          type="button"
+          onClick={() => { void handleNotificationClick(toast); setToast(null); }}
+          className="fixed top-16 right-6 z-50 hidden md:flex w-80 items-start gap-3 rounded-2xl border border-red-200 bg-white p-4 text-left shadow-2xl"
+        >
+          <span className="mt-0.5">{getNotifIcon(toast.type)}</span>
+          <span>
+            <span className="block text-sm font-bold text-gray-900">{toast.title}</span>
+            {toast.message ? <span className="mt-1 block text-xs text-gray-600 line-clamp-2">{toast.message}</span> : null}
+          </span>
+        </button>
+      )}
+
       {/* Notification Button (Desktop Floating) */}
       <div className="fixed top-4 right-6 z-50 hidden md:block">
          <button 
@@ -297,7 +333,7 @@ const DashboardLayout: React.FC = () => {
                <div className="p-4 border-b border-white/30 bg-white/40 backdrop-blur-md flex justify-between items-center">
                   <div>
                      <h3 className="font-bold text-gray-800">Notifications</h3>
-                     <p className="text-xs text-gray-500 font-medium">{unreadCount} unread alerts</p>
+                     <p className="text-xs text-gray-500 font-medium">{unreadCount} unread · {liveConnected ? 'Live' : 'Reconnecting'}</p>
                   </div>
                   <div className="flex gap-1">
                      <button onClick={handleMarkAllRead} className="p-1.5 text-gray-500 hover:text-red-600 rounded-lg hover:bg-white/50 text-xs font-bold" title="Mark all read">Read All</button>

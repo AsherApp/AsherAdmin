@@ -23,8 +23,8 @@ export interface ActivityData {
 export interface DeploymentHealth {
   id: string;
   name: string;
-  type: 'API' | 'Mobile App' | 'Desktop App' | 'Web App' | 'Website';
-  provider: 'Railway' | 'Vercel' | 'Expo / EAS' | 'Local' | 'Unknown';
+  type: 'API' | 'Mobile App' | 'Desktop App' | 'Web App' | 'Website' | 'Database' | 'Cache';
+  provider: 'Railway' | 'Vercel' | 'Expo / EAS' | 'Database' | 'Redis' | 'App' | 'Local' | 'Unknown';
   status: 'OPERATIONAL' | 'DEGRADED' | 'DOWN' | 'NOT_CONFIGURED';
   url: string | null;
   latencyMs: number | null;

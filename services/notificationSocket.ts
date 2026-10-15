@@ -11,9 +11,15 @@ let teardownTimer: ReturnType<typeof setTimeout> | null = null;
 
 type LiveHandler = (payload: Record<string, unknown>) => void;
 const handlers = new Set<LiveHandler>();
+const statusHandlers = new Set<(connected: boolean) => void>();
 
 function notify(payload: Record<string, unknown>) {
   handlers.forEach((handler) => handler(payload));
+}
+
+function notifyStatus() {
+  const connected = Boolean(socket?.connected);
+  statusHandlers.forEach((handler) => handler(connected));
 }
 
 function joinRooms(userId: string) {
@@ -52,8 +58,8 @@ export function connectAdminNotifications(userId: string, token: string): Socket
 
   socket = io(origin, {
     auth: { token },
-    transports: ['polling', 'websocket'],
-    upgrade: true,
+    transports: ['websocket'],
+    upgrade: false,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
@@ -67,8 +73,12 @@ export function connectAdminNotifications(userId: string, token: string): Socket
 
   unbindDataRuntime?.();
   unbindDataRuntime = dataRuntime.bindSocket(socket);
-  socket.on('connect', () => joinRooms(userId));
+  socket.on('connect', () => {
+    joinRooms(userId);
+    notifyStatus();
+  });
   socket.on('reconnect', () => joinRooms(userId));
+  socket.on('disconnect', () => notifyStatus());
   socket.on('notification', (payload: Record<string, unknown>) => notify(payload));
   socket.on('payment_notification', (payload: Record<string, unknown>) => notify(payload));
   socket.on('privateMessage', (payload: Record<string, unknown>) => notify({ ...payload, type: 'privateMessage' }));
@@ -101,5 +111,13 @@ export function subscribeAdminLiveNotifications(handler: LiveHandler): () => voi
   handlers.add(handler);
   return () => {
     handlers.delete(handler);
+  };
+}
+
+export function subscribeAdminSocketStatus(handler: (connected: boolean) => void): () => void {
+  statusHandlers.add(handler);
+  handler(Boolean(socket?.connected));
+  return () => {
+    statusHandlers.delete(handler);
   };
 }

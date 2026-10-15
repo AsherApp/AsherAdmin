@@ -120,7 +120,7 @@ const FinancialReports: React.FC = () => {
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Financial Reports</h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Gross transaction volume vs. Asher's commission — real revenue events, not raw transaction rows.
+            Gross volume against Asher's fee, for the currency you pick.
           </p>
         </div>
         <div className="flex items-center gap-2">

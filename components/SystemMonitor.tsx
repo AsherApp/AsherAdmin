@@ -3,6 +3,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertCircle, CheckCircle2, Clock3, ExternalLink, Globe2, Loader, RefreshCw, Server, Smartphone } from 'lucide-react';
 import { DeploymentHealth, getSystemHealth } from '../services/analyticsService';
 
+const statusLabel: Record<DeploymentHealth['status'], string> = {
+  OPERATIONAL: 'Up',
+  DEGRADED: 'Needs a look',
+  DOWN: 'Down',
+  NOT_CONFIGURED: 'Not checked',
+};
+
 const statusStyles: Record<DeploymentHealth['status'], string> = {
   OPERATIONAL: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   DEGRADED: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -38,7 +45,7 @@ const SystemMonitor: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    return watchData({ key: 'system-health', domain: 'dashboard', load: load, intervalMs: 60000 });
+    return watchData({ key: 'system-health', domain: 'dashboard', load: load });
   }, [load]);
 
   const operational = systems.filter((system) => system.status === 'OPERATIONAL').length;
@@ -49,7 +56,7 @@ const SystemMonitor: React.FC = () => {
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-red-600">Live deployment checks</p>
           <h2 className="mt-1 text-3xl font-bold tracking-tight text-gray-900">System health</h2>
-          <p className="mt-1 text-sm font-medium text-gray-600">Direct checks against configured Railway, Vercel and app health URLs. No synthetic uptime percentage.</p>
+          <p className="mt-1 text-sm font-medium text-gray-600">Live checks against the API, the database, Redis, the public sites, and who is using the tenant and vendor apps.</p>
         </div>
         <button onClick={() => void load()} disabled={loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-red-700 disabled:opacity-60">
           {loading ? <Loader size={17} className="animate-spin" /> : <RefreshCw size={17} />} Run diagnostics
@@ -60,7 +67,7 @@ const SystemMonitor: React.FC = () => {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Operational now</p><p className="mt-1 text-3xl font-bold text-gray-900">{operational} / {systems.length}</p></div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Need configuration</p><p className="mt-1 text-3xl font-bold text-gray-900">{systems.filter((s) => s.status === 'NOT_CONFIGURED').length}</p></div>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Needs a look</p><p className="mt-1 text-3xl font-bold text-gray-900">{systems.filter((s) => s.status === 'DEGRADED' || s.status === 'DOWN' || s.status === 'NOT_CONFIGURED').length}</p></div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><p className="text-sm text-gray-500">Last diagnostic</p><p className="mt-2 text-sm font-bold text-gray-900">{checkedAt ? new Date(checkedAt).toLocaleString() : 'Not completed'}</p></div>
       </div>
 
@@ -75,7 +82,7 @@ const SystemMonitor: React.FC = () => {
               <article key={system.id} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3"><span className="rounded-2xl bg-red-50 p-3 text-red-600"><Icon size={20} /></span><div className="min-w-0"><h3 className="truncate font-bold text-gray-900">{system.name}</h3><p className="text-xs font-semibold uppercase tracking-wide text-gray-400">{system.type} · {system.provider}</p></div></div>
-                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusStyles[system.status]}`}>{system.status.replace('_', ' ')}</span>
+                  <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusStyles[system.status]}`}>{statusLabel[system.status]}</span>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Response</p><p className="mt-1 font-bold text-gray-900">{system.latencyMs == null ? '—' : `${system.latencyMs} ms`}</p></div><div className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">Checked</p><p className="mt-1 font-bold text-gray-900">{new Date(system.checkedAt).toLocaleTimeString()}</p></div></div>
                 <p className="mt-4 min-h-10 text-sm leading-5 text-gray-600">{system.detail}</p>
@@ -86,7 +93,7 @@ const SystemMonitor: React.FC = () => {
         </div>
       )}
 
-      <div className="flex gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800"><Clock3 className="mt-0.5 shrink-0" size={18} /><p>Historical provider uptime and deployment history require Railway/Vercel API credentials. Until configured, this page reports verified current reachability only.</p></div>
+      <div className="flex gap-2 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800"><Clock3 className="mt-0.5 shrink-0" size={18} /><p>These checks run when you open the page and again every minute. A tenant or vendor card counts people with a live session, not a guessed uptime percentage.</p></div>
     </div>
   );
 };

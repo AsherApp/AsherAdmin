@@ -35,7 +35,7 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [accessRequests, setAccessRequests] = useState<LandlordAccessRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterSystem, setFilterSystem] = useState('4'); // Default to Rent Mgmt System
+  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ const UserManagement: React.FC = () => {
 
   useEffect(() => {
     void loadDirectory();
-  }, [loadDirectory, filterSystem]);
+  }, [loadDirectory]);
 
   const directoryRows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -90,14 +90,12 @@ const UserManagement: React.FC = () => {
         );
       });
 
-    const landlordRows = users.filter((u) => {
-      const matchesSystem = filterSystem === 'all' || u.systemId === filterSystem;
-      return matchesSystem;
-    });
+    const landlordRows = users.filter((u) => statusFilter === 'all' || u.status === statusFilter);
 
     // Access requests sit at the top so Accept/Decline is obvious.
-    return [...requestRows, ...landlordRows];
-  }, [accessRequests, users, filterSystem, searchTerm]);
+    const showRequests = statusFilter === 'all' || statusFilter === 'Access Request';
+    return [...(showRequests ? requestRows : []), ...landlordRows];
+  }, [accessRequests, users, statusFilter, searchTerm]);
 
   const handleAddUser = (newUser: UserProfile) => {
     setUsers([newUser, ...users]);
@@ -229,13 +227,12 @@ const UserManagement: React.FC = () => {
          </div>
          <div className="relative w-72">
             <div className="absolute left-4 top-3 text-gray-500 pointer-events-none"><Filter size={20} /></div>
-            <select value={filterSystem} onChange={(e) => setFilterSystem(e.target.value)} className="glass-input w-full pl-12 pr-4 py-3 rounded-2xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm cursor-pointer text-gray-700 font-medium">
-              <option value="all">All Systems</option>
-              <option value="4">Rent Mgmt System</option>
-              <option value="1">Tenant Portal</option>
-              <option value="2">Vendor App</option>
-              <option value="3">Listing Website</option>
-              <option value="5">Admin</option>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="glass-input w-full pl-12 pr-4 py-3 rounded-2xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm cursor-pointer text-gray-700 font-medium">
+              <option value="all">All landlords</option>
+              <option value="Active">Active</option>
+              <option value="Pending Invite">Waiting to join</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Access Request">Asked to join</option>
             </select>
          </div>
       </div>

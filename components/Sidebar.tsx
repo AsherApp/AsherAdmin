@@ -15,10 +15,8 @@ import {
   Mail,
   HelpCircle,
   ClipboardCheck,
-  Wrench,
   Coins,
   Wallet,
-  BarChart3,
   Store,
 } from 'lucide-react';
 import { logout } from '../services/authService';
@@ -33,12 +31,10 @@ interface SidebarProps {
 export const ADMIN_MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'systems', label: 'System Monitor', icon: Activity },
-  { id: 'landlords', label: 'Landlords', icon: Users },
-  { id: 'vendors', label: 'Vendors', icon: Wrench },
+  { id: 'users', label: 'Users', icon: Users },
   { id: 'listing-monetization', label: 'Platform Pricing', icon: Coins },
   { id: 'ad-moderation', label: 'Marketplace', icon: Store },
-  { id: 'finance', label: 'Platform Finance', icon: Wallet },
-  { id: 'financial-reports', label: 'Financial Reports', icon: BarChart3 },
+  { id: 'finance', label: 'Finance', icon: Wallet },
   { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
   { id: 'tickets', label: 'Support', icon: Ticket },
   { id: 'email', label: 'Admin Mail', icon: Mail },
