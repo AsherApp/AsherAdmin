@@ -236,14 +236,18 @@ const VendorVerificationReview: React.FC = () => {
                         </p>
                       ) : null}
                       <button
-                        onClick={() => void handleApprove(item.vendorId)}
-                        disabled={actionId === item.vendorId || !payoutReady}
-                        title={
-                          payoutReady
-                            ? 'Approve vendor'
-                            : 'Payout setup must be Ready before you can approve'
-                        }
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        type="button"
+                        onClick={() => {
+                          if (!payoutReady) {
+                            setError(
+                              `${item.payout?.provider === 'PAYSTACK' ? 'Paystack' : 'Stripe'} must be Ready before this vendor can be approved.`
+                            );
+                            return;
+                          }
+                          void handleApprove(item.vendorId);
+                        }}
+                        disabled={actionId === item.vendorId}
+                        className="flex cursor-pointer items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
                       >
                         {actionId === item.vendorId ? (
                           <Loader size={16} className="animate-spin" />

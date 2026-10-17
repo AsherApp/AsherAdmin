@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw, Clock } from 'lucide-react';
+import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw } from 'lucide-react';
 import {
   approveLandlordIdentity,
   getPendingIdentityVerifications,
@@ -202,25 +202,27 @@ const IdentityVerificationReview: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {!canApprove ? (
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold border border-amber-100">
-                      <Clock size={16} />
-                      Waiting on Stripe
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => void handleApprove(item.landlordId)}
-                      disabled={actionId === item.landlordId}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
-                    >
-                      {actionId === item.landlordId ? (
-                        <Loader size={16} className="animate-spin" />
-                      ) : (
-                        <Check size={16} />
-                      )}
-                      Approve
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!canApprove) {
+                        setError(
+                          'Stripe has not enabled payouts for this landlord yet, so Approve cannot finish.'
+                        );
+                        return;
+                      }
+                      void handleApprove(item.landlordId);
+                    }}
+                    disabled={actionId === item.landlordId}
+                    className="flex cursor-pointer items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-bold disabled:opacity-50"
+                  >
+                    {actionId === item.landlordId ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <Check size={16} />
+                    )}
+                    Approve
+                  </button>
                   <button
                     onClick={() => void handleReject(item.landlordId)}
                     disabled={actionId === item.landlordId}

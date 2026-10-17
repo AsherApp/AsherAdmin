@@ -44,6 +44,11 @@ const UserManagement: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [fallbackLink, setFallbackLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<{
+    row: UserProfile;
+    action: 'approve' | 'decline';
+  } | null>(null);
+  const [declineNote, setDeclineNote] = useState('');
 
   const loadDirectory = useCallback(async () => {
     try {
@@ -117,7 +122,11 @@ const UserManagement: React.FC = () => {
 
   const handleApproveAccess = async (row: UserProfile) => {
     if (!row.accessRequestId) return;
-    if (!window.confirm(`Approve ${row.email} and send their landlord invitation?`)) return;
+    await confirmApproveAccess(row);
+  };
+
+  const confirmApproveAccess = async (row: UserProfile) => {
+    if (!row.accessRequestId) return;
     setAccessWorkingId(row.accessRequestId);
     setNotice(null);
     setFallbackLink(null);
@@ -140,13 +149,19 @@ const UserManagement: React.FC = () => {
       setError(err?.message || `Could not approve ${row.email}.`);
     } finally {
       setAccessWorkingId(null);
+      setPendingDecision(null);
     }
   };
 
   const handleDeclineAccess = async (row: UserProfile) => {
     if (!row.accessRequestId) return;
-    const note = window.prompt(`Why are you declining ${row.email}?`);
-    if (note === null) return;
+    setPendingDecision({ row, action: 'decline' });
+    setDeclineNote('');
+  };
+
+  const confirmDeclineAccess = async (row: UserProfile) => {
+    if (!row.accessRequestId) return;
+    const note = declineNote.trim();
     setAccessWorkingId(row.accessRequestId);
     setNotice(null);
     setFallbackLink(null);
@@ -159,6 +174,7 @@ const UserManagement: React.FC = () => {
       setError(`Could not decline ${row.email}.`);
     } finally {
       setAccessWorkingId(null);
+      setPendingDecision(null);
     }
   };
 
@@ -182,6 +198,58 @@ const UserManagement: React.FC = () => {
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <span className="font-bold">{pendingAccessCount}</span> access request
           {pendingAccessCount === 1 ? '' : 's'} waiting — Accept or Decline on the rows highlighted below.
+        </div>
+      ) : null}
+
+      {pendingDecision ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm text-gray-800 shadow-xl">
+          <p className="font-bold">
+            {pendingDecision.action === 'approve'
+              ? `Approve ${pendingDecision.row.email} and send their landlord invitation?`
+              : `Decline ${pendingDecision.row.email}?`}
+          </p>
+          {pendingDecision.action === 'decline' ? (
+            <textarea
+              value={declineNote}
+              onChange={(e) => setDeclineNote(e.target.value)}
+              rows={2}
+              maxLength={500}
+              placeholder="Optional note for your records"
+              className="mt-3 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+            />
+          ) : (
+            <p className="mt-1 text-gray-600">
+              They will get a link to set a password and sign in.
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              disabled={Boolean(accessWorkingId)}
+              onClick={() =>
+                void (pendingDecision.action === 'approve'
+                  ? confirmApproveAccess(pendingDecision.row)
+                  : confirmDeclineAccess(pendingDecision.row))
+              }
+              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            >
+              {accessWorkingId
+                ? 'Saving…'
+                : pendingDecision.action === 'approve'
+                  ? 'Send invitation'
+                  : 'Decline request'}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(accessWorkingId)}
+              onClick={() => setPendingDecision(null)}
+              className="rounded-lg px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
         </div>
       ) : null}
 

@@ -28,8 +28,8 @@ const UserTable: React.FC<UserTableProps> = ({
         <span className="text-xs font-bold text-gray-500 bg-white/40 px-3 py-1 rounded-full">{users.length} Records Found</span>
       </div>
 
-      <div className="overflow-y-auto flex-1 custom-scrollbar">
-        <table className="w-full text-left border-collapse">
+      <div className="overflow-auto flex-1 custom-scrollbar">
+        <table className="w-full min-w-[880px] text-left border-collapse">
           <thead className="bg-white/30 sticky top-0 z-10 backdrop-blur-md shadow-sm">
             <tr className="text-gray-500 text-xs border-b border-white/40">
               <th className="p-5 font-bold uppercase tracking-wider">User Identity</th>
@@ -72,6 +72,26 @@ const UserTable: React.FC<UserTableProps> = ({
                           <p className="mt-1 max-w-xs truncate text-[11px] text-amber-800/80">
                             “{user.accessMessage}”
                           </p>
+                        ) : null}
+                        {isAccessRequest ? (
+                          <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => onApproveAccess?.(user)}
+                              className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-black disabled:opacity-50"
+                            >
+                              {busy ? 'Approving…' : 'Approve'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => onDeclineAccess?.(user)}
+                              className="cursor-pointer rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              Decline
+                            </button>
+                          </div>
                         ) : null}
                       </div>
                     </div>
