@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader, X, ExternalLink, Trash2 } from 'lucide-react';
 import UserTable from './users/UserTable';
-import { getAllVendors, VendorUserProfile } from '../services/vendorService';
+import { getAllVendors, approveVendorVerification, rejectVendorVerification, VendorUserProfile } from '../services/vendorService';
 import { deleteUserAccount } from '../services/userService';
 
 // Parallel to UserManagement.tsx's landlord listing, for the Vendor app
@@ -16,6 +16,8 @@ const VendorManagement: React.FC = () => {
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [decisionNote, setDecisionNote] = useState('');
+  const [deciding, setDeciding] = useState(false);
 
   useEffect(() => {
     loadVendors();
@@ -56,7 +58,9 @@ const VendorManagement: React.FC = () => {
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Vendors</h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            {total} vendor account{total === 1 ? '' : 's'} across the platform.
+            {total} vendor account{total === 1 ? '' : 's'}. Active means the email is verified.
+            Online means they are in the app. Identity approval is a separate step — open a vendor,
+            or use Verification Queue.
           </p>
         </div>
         <div className="relative">
@@ -94,7 +98,85 @@ const VendorManagement: React.FC = () => {
             </button>
             <h3 className="text-xl font-bold text-gray-800">{selectedVendor.name}</h3>
             <p className="text-sm text-gray-500">{selectedVendor.email}</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Signed-in status is separate from identity review.
+            </p>
             <div className="mt-4">{statusBadge(selectedVendor.verificationStatus)}</div>
+            {selectedVendor.verificationStatus === 'PENDING' && selectedVendor.vendorId ? (
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm font-bold text-amber-900">Waiting for your decision</p>
+                <p className="text-xs text-amber-800 mt-1">
+                  Approve or decline this identity. Stripe payouts must already be ready before an
+                  approval can go through.
+                </p>
+                <textarea
+                  value={decisionNote}
+                  onChange={(e) => setDecisionNote(e.target.value)}
+                  placeholder="Reason, if you are declining"
+                  className="mt-3 w-full rounded-xl border border-amber-200 bg-white p-2 text-sm"
+                  rows={2}
+                />
+                {deleteError ? (
+                  <p className="mt-2 text-xs text-red-700">{deleteError}</p>
+                ) : null}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={deciding}
+                    onClick={async () => {
+                      if (!selectedVendor.vendorId) return;
+                      setDeciding(true);
+                      setDeleteError('');
+                      try {
+                        await approveVendorVerification(selectedVendor.vendorId);
+                        setVendors((current) =>
+                          current.map((v) =>
+                            v.id === selectedVendor.id
+                              ? { ...v, verificationStatus: 'APPROVED' }
+                              : v
+                          )
+                        );
+                        setSelectedVendor({ ...selectedVendor, verificationStatus: 'APPROVED' });
+                      } catch (err: any) {
+                        setDeleteError(err?.message || 'Could not approve this vendor');
+                      } finally {
+                        setDeciding(false);
+                      }
+                    }}
+                    className="flex-1 rounded-xl bg-gray-900 py-2 text-sm font-bold text-white disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deciding}
+                    onClick={async () => {
+                      if (!selectedVendor.vendorId) return;
+                      setDeciding(true);
+                      setDeleteError('');
+                      try {
+                        await rejectVendorVerification(selectedVendor.vendorId, decisionNote);
+                        setVendors((current) =>
+                          current.map((v) =>
+                            v.id === selectedVendor.id
+                              ? { ...v, verificationStatus: 'REJECTED' }
+                              : v
+                          )
+                        );
+                        setSelectedVendor({ ...selectedVendor, verificationStatus: 'REJECTED' });
+                      } catch (err: any) {
+                        setDeleteError(err?.message || 'Could not decline this vendor');
+                      } finally {
+                        setDeciding(false);
+                      }
+                    }}
+                    className="flex-1 rounded-xl border border-red-200 py-2 text-sm font-bold text-red-700 disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {selectedVendor.businessName && (
               <p className="text-sm text-gray-600 mt-3">
