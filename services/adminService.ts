@@ -135,12 +135,22 @@ export type UserPortfolioTenant = {
   landlord?: UserPortfolioPerson | null;
 };
 
+export type UserPortfolioIdentity = {
+  status?: string | null;
+  documentType?: string | null;
+  documentUrls: string[];
+  livenessUrls: string[];
+  verifiedAt?: string | null;
+  submittedAt?: string | null;
+};
+
 export type UserPortfolio = {
   user: {
     id: string;
     email: string;
     name: string;
     phone?: string | null;
+    avatar?: string | null;
     role: string[];
     isVerified?: boolean;
     isSuspended?: boolean;
@@ -148,6 +158,7 @@ export type UserPortfolio = {
   landlordId?: string | null;
   landlordCode?: string | null;
   businessName?: string | null;
+  identity?: UserPortfolioIdentity | null;
   vendor?: { id: string; businessName?: string | null; verificationStatus?: string } | null;
   wallets: UserPortfolioWallet[];
   properties: UserPortfolioProperty[];

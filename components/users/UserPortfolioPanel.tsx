@@ -145,6 +145,55 @@ const UserPortfolioPanel: React.FC<UserPortfolioPanelProps> = ({ portfolio, load
         </div>
       </div>
 
+      {portfolio.identity &&
+      (portfolio.identity.documentUrls.length > 0 ||
+        portfolio.identity.livenessUrls.length > 0 ||
+        portfolio.identity.status) ? (
+        <section>
+          <h3 className="font-bold text-gray-800 text-lg mb-3">Identity check</h3>
+          <div className="p-4 rounded-2xl bg-white/35 border border-white/50 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+              {portfolio.identity.status || 'UNKNOWN'}
+              {portfolio.identity.documentType ? ` · ${portfolio.identity.documentType}` : ''}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {portfolio.identity.livenessUrls.map((url, index) => (
+                <a
+                  key={`live-${index}`}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <img
+                    src={url}
+                    alt={`Selfie ${index + 1}`}
+                    className="h-24 w-20 rounded-lg object-cover border border-emerald-100"
+                  />
+                  <span className="mt-1 block text-xs font-bold text-emerald-700">Selfie {index + 1}</span>
+                </a>
+              ))}
+              {portfolio.identity.documentUrls.map((url, index) => (
+                <a
+                  key={`doc-${index}`}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg h-fit"
+                >
+                  ID document {index + 1}
+                </a>
+              ))}
+            </div>
+            {!portfolio.identity.documentUrls.length && !portfolio.identity.livenessUrls.length ? (
+              <p className="text-xs text-gray-500">
+                No ID files on this account. Reject clears them; Approve keeps them here.
+              </p>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       {portfolio.landlord && (
         <section>
           <h3 className="font-bold text-gray-800 text-lg mb-3">Connected landlord</h3>

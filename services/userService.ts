@@ -24,6 +24,7 @@ export interface User {
   presence?: 'online' | 'away' | 'offline';
   lastSeenAt?: string | null;
   phone?: string;
+  avatar?: string | null;
   ticketsRaised?: number;
   profile?: {
     firstName?: string;
@@ -52,6 +53,7 @@ export const mapLandlordToUserProfile = (user: User): UserProfile => ({
   presence: user.presence,
   lastSeenAt: user.lastSeenAt,
   phone: user.phone || user.profile?.phoneNumber || '',
+  avatarUrl: user.avatar || undefined,
   ticketsRaised: user.ticketsRaised || 0,
 });
 

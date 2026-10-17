@@ -63,6 +63,7 @@ const UserTable: React.FC<UserTableProps> = ({
                       <Avatar
                         size="md"
                         name={user.name}
+                        source={user.avatarUrl}
                         className="shadow-md transition-transform group-hover:scale-105"
                       />
                       <div>

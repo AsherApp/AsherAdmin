@@ -305,8 +305,15 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
           {/* Sidebar */}
           <div className="w-80 border-r border-white/20 flex flex-col overflow-y-auto" style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}>
             <div className="p-8 flex flex-col items-center border-b border-white/20 bg-gradient-to-b from-white/10 to-transparent">
-              <Avatar size="2xl" name={user.name} className="mb-5 shadow-xl" />
-              <h3 className="text-xl font-bold text-gray-900 text-center tracking-tight">{user.name}</h3>
+              <Avatar
+                size="2xl"
+                name={portfolio?.user?.name || user.name}
+                source={portfolio?.user?.avatar || user.avatarUrl}
+                className="mb-5 shadow-xl"
+              />
+              <h3 className="text-xl font-bold text-gray-900 text-center tracking-tight">
+                {portfolio?.user?.name || user.name}
+              </h3>
               <p className="text-gray-600 text-sm mb-5 font-medium">{user.email}</p>
               <div className={`px-4 py-1.5 rounded-full text-xs font-bold border backdrop-blur-md shadow-sm ${user.status === 'Active' ? 'bg-green-100/30 text-green-800 border-green-200/40' : 'bg-red-100/30 text-red-800 border-red-200/40'}`}>{user.status} Account</div>
             </div>
