@@ -73,26 +73,6 @@ const UserTable: React.FC<UserTableProps> = ({
                             “{user.accessMessage}”
                           </p>
                         ) : null}
-                        {isAccessRequest ? (
-                          <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => onApproveAccess?.(user)}
-                              className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-bold text-white hover:bg-black disabled:opacity-50"
-                            >
-                              {busy ? 'Approving…' : 'Approve'}
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => onDeclineAccess?.(user)}
-                              className="cursor-pointer rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
-                            >
-                              Decline
-                            </button>
-                          </div>
-                        ) : null}
                       </div>
                     </div>
                   </td>
