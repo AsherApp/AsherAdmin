@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Loader, Check, X, RefreshCw } from 'lucide-react';
 import {
   approveLandlordIdentity,
   getPendingIdentityVerifications,
@@ -32,6 +32,7 @@ const IdentityVerificationReview: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
   const loadPending = useCallback(async () => {
     setLoading(true);
@@ -166,12 +167,11 @@ const IdentityVerificationReview: React.FC = () => {
                   )}
                   <div className="flex flex-wrap gap-3 mt-3">
                     {item.livenessUrls?.map((url, index) => (
-                      <a
+                      <button
                         key={`${item.landlordId}-selfie-${index}`}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
+                        type="button"
+                        onClick={() => setPreview({ url, title: `Selfie ${index + 1}` })}
+                        className="block text-left"
                       >
                         <img
                           src={url}
@@ -180,21 +180,18 @@ const IdentityVerificationReview: React.FC = () => {
                         />
                         <span className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
                           Selfie
-                          <ExternalLink size={12} />
                         </span>
-                      </a>
+                      </button>
                     ))}
                     {item.documentUrls.map((url, index) => (
-                      <a
+                      <button
                         key={`${item.landlordId}-${index}`}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        type="button"
+                        onClick={() => setPreview({ url, title: `Document ${index + 1}` })}
                         className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg h-fit"
                       >
                         Document {index + 1}
-                        <ExternalLink size={12} />
-                      </a>
+                      </button>
                     ))}
                   </div>
                   <p className="text-xs text-gray-600 mt-2 font-medium">
@@ -237,8 +234,80 @@ const IdentityVerificationReview: React.FC = () => {
           })}
         </div>
       )}
+      {preview ? (
+        <IdentityFilePreview
+          url={preview.url}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      ) : null}
     </div>
   );
 };
+
+function looksLikeImage(url: string) {
+  return /\.(jpe?g|png|gif|webp|bmp|svg)(\?|#|$)/i.test(url);
+}
+
+function IdentityFilePreview({
+  url,
+  title,
+  onClose,
+}: {
+  url: string;
+  title: string;
+  onClose: () => void;
+}) {
+  const image = looksLikeImage(url);
+  const [src, setSrc] = useState<string | null>(image ? url : null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (image) return;
+    let objectUrl = '';
+    let cancelled = false;
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error('Could not open this file');
+        return response.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setError('This file could not be shown here.');
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [image, url]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <p className="text-sm font-bold">{title}</p>
+          <button type="button" onClick={onClose} className="rounded-lg p-1 hover:bg-gray-100">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="overflow-auto bg-gray-50 p-4">
+          {error ? (
+            <p className="py-10 text-center text-sm text-gray-500">{error}</p>
+          ) : image ? (
+            <img src={url} alt={title} className="mx-auto max-h-[75vh] object-contain" />
+          ) : src ? (
+            <iframe title={title} src={src} className="h-[75vh] w-full rounded-lg border bg-white" />
+          ) : (
+            <p className="py-10 text-center text-sm text-gray-500">Opening…</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default IdentityVerificationReview;
