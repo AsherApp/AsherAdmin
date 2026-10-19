@@ -1,9 +1,9 @@
 /**
  * Client-side upload preparation shared across Asher web apps.
  *
- * Photos of documents are recompressed at high quality so large phone photos
- * shrink before upload. PDFs and office docs pass through. Max 20 MB after
- * preparation.
+ * Photos are resized (max 2560px edge) and encoded as WebP at high quality.
+ * Falls back to JPEG when the browser cannot encode WebP. PDFs and office
+ * docs pass through. Max 20 MB after preparation.
  */
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -43,8 +43,8 @@ export function isImageUpload(file: File): boolean {
   );
 }
 
-function renameToJpeg(name: string): string {
-  return name.replace(/\.[^.]+$/, '') + '.jpg';
+function renameWithExt(name: string, ext: string): string {
+  return name.replace(/\.[^.]+$/, '') + `.${ext}`;
 }
 
 function canvasToBlob(
@@ -55,6 +55,21 @@ function canvasToBlob(
   return new Promise(resolve => {
     canvas.toBlob(blob => resolve(blob), type, quality);
   });
+}
+
+async function encodeCanvas(
+  canvas: HTMLCanvasElement
+): Promise<{ blob: Blob; type: string; ext: string } | null> {
+  const quality = VISUALLY_LOSSLESS_QUALITY;
+  const webp = await canvasToBlob(canvas, 'image/webp', quality);
+  if (webp && webp.size > 0 && webp.type === 'image/webp') {
+    return { blob: webp, type: 'image/webp', ext: 'webp' };
+  }
+  const jpeg = await canvasToBlob(canvas, 'image/jpeg', quality);
+  if (jpeg && jpeg.size > 0) {
+    return { blob: jpeg, type: 'image/jpeg', ext: 'jpg' };
+  }
+  return null;
 }
 
 async function compressImageFile(file: File): Promise<File> {
@@ -80,21 +95,11 @@ async function compressImageFile(file: File): Promise<File> {
     if (!ctx) return file;
     ctx.drawImage(bitmap, 0, 0, width, height);
 
-    const keepPng =
-      (file.type === 'image/png' || extensionOf(file.name) === 'png') &&
-      file.size < 1.5 * 1024 * 1024;
+    const encoded = await encodeCanvas(canvas);
+    if (!encoded || encoded.blob.size >= file.size) return file;
 
-    const outputType = keepPng ? 'image/png' : 'image/jpeg';
-    const blob = await canvasToBlob(
-      canvas,
-      outputType,
-      keepPng ? 1 : VISUALLY_LOSSLESS_QUALITY
-    );
-    if (!blob || blob.size >= file.size) return file;
-
-    const nextName = outputType === 'image/jpeg' ? renameToJpeg(file.name) : file.name;
-    return new File([blob], nextName, {
-      type: outputType,
+    return new File([encoded.blob], renameWithExt(file.name, encoded.ext), {
+      type: encoded.type,
       lastModified: Date.now(),
     });
   } finally {
