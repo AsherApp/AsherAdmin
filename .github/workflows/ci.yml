@@ -1,4 +1,6 @@
-name: CI
+# Merge gate: typecheck + production build on every push/PR.
+# Fail here before the change lands — not after deploy.
+name: Fast gate
 
 on:
   push:
@@ -6,11 +8,11 @@ on:
   pull_request:
 
 concurrency:
-  group: admin-ci-${{ github.ref }}
+  group: admin-fast-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  verify:
+  gate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
