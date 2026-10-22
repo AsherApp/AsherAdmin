@@ -64,7 +64,7 @@ export const getEmailFolder = async (folder: 'inbox' | 'sent' | 'drafts' | 'tras
   let endpoint = '/emails/user-mails/categorize';
   if (folder === 'sent') endpoint = '/emails/user/sent';
   if (folder === 'drafts') params.set('isDraft', 'true');
-  if (folder === 'trash') params.set('isThrash', 'true');
+  if (folder === 'trash') params.set('isDeleted', 'true');
   if (folder === 'starred') params.set('isStarred', 'true');
   const response = await api.get(`${endpoint}?${params.toString()}`);
   const list = Array.isArray(response.data)
