@@ -13,8 +13,18 @@ type LandlordInviteStatus =
 const SetPassword: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
-  const email = searchParams.get('email') || '';
+  const [capturedInvite] = useState(() => ({
+    token: searchParams.get('token') || '',
+    email: searchParams.get('email') || '',
+  }));
+  const token = capturedInvite.token;
+  const email = capturedInvite.email;
+
+  useEffect(() => {
+    if (token || email) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [token, email]);
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

@@ -46,8 +46,8 @@ export const ADMIN_MENU_ITEMS = [
 const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab, isCollapsed, setIsCollapsed }) => {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 

@@ -89,7 +89,13 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 /**
  * Logout from admin dashboard
  */
-export const logout = (): void => {
+export const logout = async (): Promise<void> => {
+  const token = localStorage.getItem('admin_token');
+  try {
+    if (token) await api.post('/auth/logout');
+  } catch {
+    // Still clear the local session if the server is unreachable.
+  }
   localStorage.removeItem('admin_token');
   localStorage.removeItem('admin_refresh_token');
   localStorage.removeItem('admin_user');

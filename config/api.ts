@@ -157,11 +157,6 @@ const apiRequest = async (
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Add refresh token header for automatic token refresh on backend
-  if (refreshToken) {
-    headers['x-refresh-token'] = refreshToken;
-  }
-
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
