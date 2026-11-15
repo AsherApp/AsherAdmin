@@ -110,8 +110,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     Creates a landlord account on{' '}
-                    <a href="https://asherlanlord.vercel.app" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
-                      asherlanlord.vercel.app
+                    <a href="https://landlord.asher.living" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      landlord.asher.living
                     </a>
                   </p>
                 </div>
@@ -159,12 +159,12 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onAdd }) => {
                     <b>Rent Management System</b> (AsherLandlordFE).
                     <br /><br />
                     They will set their password at{' '}
-                    <a href="https://asherlanlord.vercel.app/set-password" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
-                      asherlanlord.vercel.app
+                    <a href="https://landlord.asher.living/set-password" target="_blank" rel="noreferrer" className="text-red-600 hover:underline">
+                      landlord.asher.living
                     </a>{' '}
                     and log in there — not on this admin panel.
                     <br /><br />
-                    Ask them to check inbox and spam. Email is sent from <b>admin@ashercorp.co.uk</b>.
+                    Ask them to check inbox and spam. Email is sent from <b>support@asher.living</b>.
                   </>
                 ) : (
                   <>

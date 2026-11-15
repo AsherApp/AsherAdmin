@@ -186,7 +186,7 @@ const UserManagement: React.FC = () => {
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">User Directory</h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Invite landlords, review access requests, and manage profiles — same list.
+            Invite landlords and manage profiles. A join request is approved on its own and the set-password link is emailed. The request stays on record.
           </p>
         </div>
         <button onClick={() => setShowAddModal(true)} className="bg-red-600/90 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg backdrop-blur-sm">

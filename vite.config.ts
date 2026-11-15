@@ -22,7 +22,7 @@ export default defineConfig(() => {
     build: {
       target:
         process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-      minify: process.env.TAURI_DEBUG ? false : 'esbuild',
+      minify: process.env.TAURI_DEBUG ? false : ('esbuild' as const),
       sourcemap: !!process.env.TAURI_DEBUG,
     },
     plugins: [react(), tailwindcss()],

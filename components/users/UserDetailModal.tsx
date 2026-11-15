@@ -577,7 +577,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ user, onClose, onUpda
 
                           <div className="p-4 rounded-xl bg-white/40 border border-white/50 space-y-3">
                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide">Set Temporary Password</label>
-                            <p className="text-xs text-gray-500">Give the user a password to log in at asherlanlord.vercel.app if email delivery fails. They can change it after signing in.</p>
+                            <p className="text-xs text-gray-500">Give the user a password to log in at landlord.asher.living if email delivery fails. They can change it after signing in.</p>
                             <div className="relative">
                               <input
                                 type={showTempPassword ? 'text' : 'password'}

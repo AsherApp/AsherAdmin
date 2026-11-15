@@ -150,6 +150,11 @@ export type UserPortfolio = {
     email: string;
     name: string;
     phone?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zip?: string | null;
+    country?: string | null;
     avatar?: string | null;
     role: string[];
     isVerified?: boolean;
@@ -159,7 +164,12 @@ export type UserPortfolio = {
   landlordCode?: string | null;
   businessName?: string | null;
   identity?: UserPortfolioIdentity | null;
-  vendor?: { id: string; businessName?: string | null; verificationStatus?: string } | null;
+  vendor?: {
+    id: string;
+    businessName?: string | null;
+    verificationStatus?: string;
+    documents?: { id: string; type: string; url: string; createdAt?: string }[];
+  } | null;
   wallets: UserPortfolioWallet[];
   properties: UserPortfolioProperty[];
   tenants: UserPortfolioTenant[];

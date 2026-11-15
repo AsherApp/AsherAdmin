@@ -145,6 +145,17 @@ const UserPortfolioPanel: React.FC<UserPortfolioPanelProps> = ({ portfolio, load
         </div>
       </div>
 
+      {(portfolio.user.address || portfolio.user.city || portfolio.user.country || portfolio.user.zip) ? (
+        <section>
+          <h3 className="font-bold text-gray-800 text-lg mb-3">Profile</h3>
+          <div className="p-4 rounded-2xl bg-white/35 border border-white/50 text-sm text-gray-700">
+            <p>{[portfolio.user.address, portfolio.user.city, portfolio.user.state, portfolio.user.zip].filter(Boolean).join(', ')}</p>
+            {portfolio.user.country ? <p className="text-xs text-gray-500 mt-1">{portfolio.user.country}</p> : null}
+            {portfolio.user.phone ? <p className="text-xs text-gray-500 mt-1">{portfolio.user.phone}</p> : null}
+          </div>
+        </section>
+      ) : null}
+
       {portfolio.identity &&
       (portfolio.identity.documentUrls.length > 0 ||
         portfolio.identity.livenessUrls.length > 0 ||
@@ -215,6 +226,21 @@ const UserPortfolioPanel: React.FC<UserPortfolioPanelProps> = ({ portfolio, load
             {portfolio.vendor.verificationStatus && (
               <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{portfolio.vendor.verificationStatus}</p>
             )}
+            {portfolio.vendor.documents && portfolio.vendor.documents.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {portfolio.vendor.documents.map((doc) => (
+                  <a
+                    key={doc.id}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2 py-1 rounded-lg"
+                  >
+                    {doc.type || 'Document'}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
       )}

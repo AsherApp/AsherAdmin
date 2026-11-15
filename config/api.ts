@@ -49,7 +49,7 @@ const normalizeApiBaseUrl = (url: string): string => {
 
 // Desktop release builds (`tauri build` / `vite build`) always talk to the live API.
 // `npm run dev` and `tauri:dev` keep using VITE_API_BASE_URL from .env.
-const LIVE_API_BASE_URL = 'https://asherbe-production.up.railway.app/api';
+const LIVE_API_BASE_URL = 'https://be.asher.living/api';
 
 // @ts-ignore Vite sets import.meta.env.PROD on `vite build` / Tauri release builds.
 const isReleaseBuild = Boolean((import.meta.env as { PROD?: boolean }).PROD);

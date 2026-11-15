@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, Loader, Check, X, RefreshCw } from 'lucide-react';
 import {
   approveLandlordIdentity,
-  getPendingIdentityVerifications,
+  getIdentityVerifications,
   PendingIdentityVerification,
   rejectLandlordIdentity,
 } from '../services/identityVerificationService';
@@ -27,32 +27,40 @@ function stripeReady(item: PendingIdentityVerification) {
   return Boolean(item.stripeDetailsSubmitted && item.stripePayoutsEnabled);
 }
 
+function profileLine(item: PendingIdentityVerification) {
+  return [item.address, item.city, item.state, item.zip, item.country]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
 const IdentityVerificationReview: React.FC = () => {
+  const [list, setList] = useState<'pending' | 'verified'>('pending');
   const [items, setItems] = useState<PendingIdentityVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
-  const loadPending = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await getPendingIdentityVerifications();
+      const data = await getIdentityVerifications(list);
       setItems(data);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : 'Failed to load pending verifications';
+        err instanceof Error ? err.message : 'Failed to load identity checks';
       setError(message);
       setItems([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [list]);
 
   useEffect(() => {
-    void loadPending();
-  }, [loadPending]);
+    void load();
+  }, [load]);
 
   const handleApprove = async (landlordId: string) => {
     setActionId(landlordId);
@@ -94,16 +102,37 @@ const IdentityVerificationReview: React.FC = () => {
             Identity Verification
           </h2>
           <p className="text-gray-600 text-sm mt-1 font-medium">
-            Review landlord ID uploads. Nigeria: Approve when documents look right —
-            that unlocks leasing. UK: Stripe payouts must be ready before Approve.
+            Review the ID and selfie. Approving keeps both, and the address, on
+            the landlord so you can open them again.
           </p>
         </div>
         <button
-          onClick={() => void loadPending()}
+          onClick={() => void load()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white/70 hover:bg-white text-sm font-bold text-gray-700"
         >
           <RefreshCw size={16} />
           Refresh
+        </button>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setList('pending')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold ${
+            list === 'pending' ? 'bg-gray-900 text-white' : 'bg-white/70 text-gray-700 border border-gray-200'
+          }`}
+        >
+          Waiting
+        </button>
+        <button
+          type="button"
+          onClick={() => setList('verified')}
+          className={`px-4 py-2 rounded-xl text-sm font-bold ${
+            list === 'verified' ? 'bg-gray-900 text-white' : 'bg-white/70 text-gray-700 border border-gray-200'
+          }`}
+        >
+          Approved
         </button>
       </div>
 
@@ -116,18 +145,21 @@ const IdentityVerificationReview: React.FC = () => {
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400">
           <Loader className="animate-spin mr-2" />
-          Loading pending reviews...
+          {list === 'verified' ? 'Loading approved checks...' : 'Loading pending reviews...'}
         </div>
       ) : items.length === 0 ? (
         <div className="glass-panel p-12 text-center rounded-2xl border border-white/50">
           <ShieldCheck size={40} className="mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-600 font-medium">No pending identity verifications.</p>
+          <p className="text-gray-600 font-medium">
+            {list === 'verified'
+              ? 'No approved identity checks yet. Once you approve one, the ID and selfie stay here.'
+              : 'No pending identity verifications.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
           {items.map((item) => {
             const uk = item.verifiedVia === 'stripe';
-            const canApprove = !uk || stripeReady(item);
             return (
               <div
                 key={item.landlordId}
@@ -139,30 +171,40 @@ const IdentityVerificationReview: React.FC = () => {
                   {item.businessName && (
                     <p className="text-xs text-gray-500 mt-1">{item.businessName}</p>
                   )}
+                  {profileLine(item) ? (
+                    <p className="text-xs text-gray-600 mt-1">{profileLine(item)}</p>
+                  ) : null}
+                  {item.phoneNumber ? (
+                    <p className="text-xs text-gray-500 mt-1">{item.phoneNumber}</p>
+                  ) : null}
                   {item.submittedAt && (
                     <p className="text-xs text-gray-400 mt-2">
                       Submitted {new Date(item.submittedAt).toLocaleString()}
+                      {item.verifiedAt
+                        ? ` · Approved ${new Date(item.verifiedAt).toLocaleString()}`
+                        : ''}
                     </p>
                   )}
                   {uk ? (
                     <p className="text-xs font-bold mt-2">
                       {stripeReady(item) ? (
                         <span className="text-green-700">
-                          Stripe: payouts ready — you can Approve
+                          Stripe: payouts ready — they can withdraw
                         </span>
                       ) : item.stripeDetailsSubmitted ? (
                         <span className="text-amber-700">
-                          Stripe: verifying — Approve unlocks when payouts are enabled
+                          Stripe: still confirming the bank. Listing does not wait.
                         </span>
                       ) : (
                         <span className="text-blue-700">
-                          Stripe: awaiting Connect / bank setup
+                          Stripe: bank not connected yet. Needed for withdraw, not listing.
                         </span>
                       )}
                     </p>
                   ) : (
                     <p className="text-xs text-gray-500 font-medium mt-1">
-                      Nigeria / other — Asher reviews the ID. Approve unlocks leasing.
+                      Nigeria / other — Asher reviews the ID. Approve unlocks listing.
+                      Paystack is only needed to withdraw.
                     </p>
                   )}
                   <div className="flex flex-wrap gap-3 mt-3">
@@ -198,16 +240,11 @@ const IdentityVerificationReview: React.FC = () => {
                     {faceMatchCopy(item.faceMatch)}
                   </p>
                 </div>
+                {list === 'pending' ? (
                 <div className="flex gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
-                      if (!canApprove) {
-                        setError(
-                          'Stripe has not enabled payouts for this landlord yet, so Approve cannot finish.'
-                        );
-                        return;
-                      }
                       void handleApprove(item.landlordId);
                     }}
                     disabled={actionId === item.landlordId}
@@ -229,6 +266,9 @@ const IdentityVerificationReview: React.FC = () => {
                     Reject
                   </button>
                 </div>
+                ) : (
+                  <p className="text-xs font-bold text-green-700 shrink-0">Kept on the profile</p>
+                )}
               </div>
             );
           })}
