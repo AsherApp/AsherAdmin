@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Asher Admin",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.asher.admin",
   "build": {
     "frontendDist": "../dist",
@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' tauri: asset: https://asset.localhost; connect-src 'self' https://be.asher.living wss://be.asher.living https://*.asher.living wss://*.asher.living https://asherbe-production.up.railway.app wss://asherbe-production.up.railway.app https://*.up.railway.app wss://*.up.railway.app https://generativelanguage.googleapis.com https://*.googleapis.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https: blob:"
+      "csp": "default-src 'self' tauri: asset: https://asset.localhost; connect-src 'self' https://be.asher.living wss://be.asher.living https://*.asher.living wss://*.asher.living https://generativelanguage.googleapis.com https://*.googleapis.com; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https: blob:"
     }
   },
   "bundle": {
