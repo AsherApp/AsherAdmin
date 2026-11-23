@@ -1,5 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { FileAsset } from '../types';
+import {
+  documentKindForCategory,
+  renderLibraryDocument,
+} from '../shared/documentEngine';
 import {
   FileText, Download, Search, Plus,
   Smartphone, Globe, Server, HelpCircle, BookOpen, LayoutTemplate, Filter,
@@ -84,6 +88,24 @@ const FileLibrary: React.FC = () => {
     return matchesSearch && matchesCategory && matchesSystem;
   });
 
+  /*
+   * The document exactly as it will ship.
+   *
+   * This preview used to carry a stylesheet of its own — Inter, a 20mm margin,
+   * grey table borders — so an admin writing an Asher template saw a document
+   * nobody else would ever see. The landlords and tenants it goes to read it
+   * through the document engine: a serif document, on A4 sheets, with a cover
+   * and page numbers. `allow-scripts` is what lets it paginate; it has no
+   * same-origin access, so it cannot reach into the admin app.
+   */
+  const previewDoc = useMemo(
+    () => renderLibraryDocument(
+      { title: docTitle || 'Untitled document', kind: documentKindForCategory(docCategory, docTitle) },
+      docContent
+    ),
+    [docTitle, docCategory, docContent]
+  );
+
   const [isSaving, setIsSaving] = useState(false);
   const [publishStatus, setPublishStatus] = useState<'draft' | 'publish'>('draft');
 
@@ -131,7 +153,14 @@ const FileLibrary: React.FC = () => {
         ? `${categoryPrefix} ${docTitle} ${routingSuffix}`
         : `${docTitle} ${routingSuffix}`;
       
-      const blob = new Blob([docContent], { type: 'text/html' });
+      /*
+       * Stored as a complete document, which is what the library seeders
+       * produce for the same routing tags. It used to be the editor's raw
+       * innerHTML, so a template created here and one seeded from the
+       * repository were different shapes in the same table — and opening the
+       * stored file showed unstyled HTML.
+       */
+      const blob = new Blob([previewDoc], { type: 'text/html' });
       const file = new File([blob], `${documentName}.html`, { type: 'text/html' });
       
       const isPublished = publishStatus === 'publish';
@@ -338,7 +367,7 @@ const FileLibrary: React.FC = () => {
 
            <div className="flex-1 bg-gray-100/50 relative overflow-y-auto custom-scrollbar flex justify-center p-8" onClick={() => !previewMode && editorRef.current?.focus()}>
               {previewMode ? (
-                 <iframe title="Document preview" sandbox="" srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Inter,Arial,sans-serif;line-height:1.55;color:#1f2937;margin:20mm}img{max-width:100%}table{border-collapse:collapse;width:100%}td,th{border:1px solid #d1d5db;padding:8px}</style></head><body>${docContent}</body></html>`} className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm animate-in fade-in" />
+                 <iframe title="Document preview" sandbox="allow-scripts" srcDoc={previewDoc} className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm animate-in fade-in" />
               ) : (
                  <div 
                     ref={editorRef} 
