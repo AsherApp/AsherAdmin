@@ -181,7 +181,7 @@ const UserManagement: React.FC = () => {
   const pendingAccessCount = accessRequests.length;
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col space-y-6 relative">
+    <div className="app-pane flex flex-col space-y-6 relative">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">User Directory</h2>

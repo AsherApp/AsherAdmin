@@ -250,7 +250,7 @@ const EmailSystem: React.FC = () => {
   );
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6 relative">
+    <div className="flex app-pane gap-6 relative">
       {/* Sidebar */}
       <div className="w-64 flex flex-col py-2">
         <button onClick={() => { setIsComposeOpen(true); setComposeMinimized(false); setSendError(null); }} className="w-40 bg-white hover:bg-gray-50 text-gray-700 rounded-2xl py-4 px-6 font-medium shadow-lg flex items-center gap-3 mb-6 border border-gray-100 group transition-all hover:scale-105"><Pencil className="text-red-600 group-hover:rotate-12 transition-transform" size={20} /><span className="text-sm font-bold tracking-wide">Compose</span></button>

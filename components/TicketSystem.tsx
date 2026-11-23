@@ -145,7 +145,7 @@ const TicketSystem: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col space-y-6">
+    <div className="app-pane flex flex-col space-y-6">
       <div className="flex flex-col lg:flex-row justify-between items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Support</h2>

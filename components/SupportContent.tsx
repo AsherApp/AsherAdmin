@@ -323,7 +323,7 @@ const SupportContent: React.FC = () => {
   ];
 
   return (
-    <div className="h-[calc(100vh-100px)] flex flex-col space-y-6">
+    <div className="app-pane flex flex-col space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-end gap-4">
         <div>

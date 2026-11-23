@@ -219,7 +219,7 @@ const Inbox: React.FC = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6 overflow-hidden relative">
+    <div className="flex app-pane gap-6 overflow-hidden relative">
       {error && <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-800 shadow">{error}</div>}
       {/* Sidebar List */}
       <div className="w-80 flex flex-col glass-panel rounded-3xl border border-white/40">

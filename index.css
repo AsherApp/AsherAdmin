@@ -70,12 +70,65 @@
   }
 }
 
+/*
+ * The root font size drives every rem in Tailwind, so it is the one knob that
+ * decides how this app sizes itself.
+ *
+ * It was fixed at the browser's 16px, so a 1280px laptop and a 2560px monitor
+ * rendered identical type and identical padding — the laptop simply having
+ * half the width to put it in. Designed on the larger screen, the laptop then
+ * reads as zoomed in and cramped. This is the same two-tier curve the landlord
+ * app uses, so the two feel like one product: continuous at 1280px, and never
+ * smaller at a wider width than at a narrower one.
+ */
+html {
+  font-size: clamp(12px, 10px + 0.5vw, 16px);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 1280px) {
+  html {
+    font-size: clamp(16px, 8px + 0.625vw, 18px);
+  }
+}
+
+:root {
+  /*
+   * The usable height of the window.
+   *
+   * `100vh` ignores a mobile browser's URL bar, so a pane sized to it is
+   * taller than the screen and the page gains a phantom scroll even when its
+   * content fits. There is no URL bar in the desktop build, but this app is
+   * also served on the web, and one token costs nothing.
+   */
+  --app-vh: 100vh;
+  /** The app header every full-height pane sits below. */
+  --app-header: 100px;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-vh: 100dvh;
+  }
+}
+
 html,
 body,
 #root {
   height: 100%;
   min-height: 100%;
   margin: 0;
+}
+
+/*
+ * A pane that fills the window below the header.
+ *
+ * `h-[calc(100vh-100px)]` was written out in seven components, each with its
+ * own copy of the header height, so moving the header meant finding all seven.
+ */
+.app-pane {
+  height: calc(var(--app-vh) - var(--app-header));
 }
 
 body {

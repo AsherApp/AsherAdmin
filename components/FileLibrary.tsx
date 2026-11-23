@@ -338,7 +338,7 @@ const FileLibrary: React.FC = () => {
 
   if (viewMode === 'creator') {
     return (
-      <div className="h-[calc(100vh-100px)] flex flex-col animate-in fade-in slide-in-from-bottom-4">
+      <div className="app-pane flex flex-col animate-in fade-in slide-in-from-bottom-4">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button onClick={() => { setEditingId(null); setViewMode('list'); }} className="p-2 bg-white/40 hover:bg-white/80 rounded-xl transition-colors"><ChevronLeft size={24} className="text-gray-600" /></button>
@@ -513,7 +513,7 @@ const FileLibrary: React.FC = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+    <div className="flex app-pane gap-6 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
       {/* Sidebar Categories */}
       <div className="w-64 flex flex-col glass-panel rounded-3xl overflow-hidden border border-white/40">
          <div className="p-6 border-b border-white/30 bg-white/20 backdrop-blur-md">
