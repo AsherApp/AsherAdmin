@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { FileAsset } from '../types';
 import {
+  documentBodyOf,
   documentKindForCategory,
   renderLibraryDocument,
 } from '../shared/documentEngine';
@@ -12,7 +13,41 @@ import {
 } from 'lucide-react';
 import { generateDocumentTemplate } from '../services/geminiService';
 import { getSystemDetails } from '../utils/uiHelpers';
-import { getDocuments, uploadDocument, updateDocumentStatus, Document } from '../services/fileService';
+import { getDocuments, uploadDocument, updateDocumentContent, updateDocumentStatus, Document } from '../services/fileService';
+
+/**
+ * Read a library document's name back into the fields that produced it.
+ *
+ * The name IS the routing: `[Category] Title [templates:section:country]` is
+ * what tells the library where a document belongs and which market it is for.
+ * Saving an edit with a different section or country would move the document,
+ * so these are read back rather than left at the form's defaults.
+ */
+function parseLibraryDocumentName(name: string): {
+  title: string;
+  category: FileAsset['category'];
+  section: string;
+  country: string;
+} {
+  const categoryMatch = name.match(
+    /^\[(Template|Guide|Legal|FAQ|Book|News|Tutorial|Handbook|HowTo|Journal|Law)\]\s*/i
+  );
+  const routingMatch = name.match(
+    /\[(?:templates|tenant-library|vendor-library):([^:\]]+)(?::([^\]]+))?\]\s*$/i
+  );
+
+  const title = name
+    .replace(categoryMatch?.[0] ?? '', '')
+    .replace(routingMatch?.[0] ?? '', '')
+    .trim();
+
+  return {
+    title,
+    category: (categoryMatch?.[1] ?? 'Template') as FileAsset['category'],
+    section: routingMatch?.[1] ?? 'tenant-onboarding',
+    country: routingMatch?.[2] ?? 'ALL',
+  };
+}
 
 const FileLibrary: React.FC = () => {
   const [files, setFiles] = useState<FileAsset[]>([]);
@@ -106,8 +141,84 @@ const FileLibrary: React.FC = () => {
     [docTitle, docCategory, docContent]
   );
 
+  /** The document being edited, or null when creating a new one. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [loadingDoc, setLoadingDoc] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [publishStatus, setPublishStatus] = useState<'draft' | 'publish'>('draft');
+
+  /**
+   * Open a published document for editing.
+   *
+   * The stored file is a complete document, so the WRITING has to be lifted
+   * out of it — `documentBodyOf` is the engine's own rule for where a
+   * document's text ends and its shell begins, the same one the landlord app
+   * uses to read these files. Loading the whole thing into a contentEditable
+   * would put the cover, the stylesheet and the pagination script into the
+   * text the admin is trying to edit.
+   *
+   * The name carries the routing, which is how the library knows where the
+   * document belongs, so it is read back rather than guessed at — saving with
+   * a different section or country would move the document.
+   */
+  const handleEditDocument = async (file: FileAsset) => {
+    if (!file.url) {
+      setLoadError('This document has no stored file to edit.');
+      return;
+    }
+
+    setLoadingDoc(true);
+    setLoadError('');
+    try {
+      const response = await fetch(file.url);
+      if (!response.ok) throw new Error(`Could not load the document (${response.status})`);
+      const stored = await response.text();
+
+      const parsed = parseLibraryDocumentName(file.name);
+      setDocTitle(parsed.title);
+      setDocCategory(parsed.category);
+      setDocSection(parsed.section);
+      setDocCountry(parsed.country);
+      setDocSystemId(file.systemId);
+      setPublishStatus(file.status === 'Published' ? 'publish' : 'draft');
+
+      const body = documentBodyOf(stored);
+      setDocContent(body);
+      setEditingId(file.id);
+      setPreviewMode(false);
+      setViewMode('creator');
+      // contentEditable is uncontrolled: it has to be written to directly.
+      requestAnimationFrame(() => {
+        if (editorRef.current) editorRef.current.innerHTML = body;
+      });
+    } catch (error: any) {
+      setLoadError(error?.message || 'Could not open that document for editing.');
+    } finally {
+      setLoadingDoc(false);
+    }
+  };
+
+  /**
+   * Start a blank document.
+   *
+   * This has to clear `editingId`. Without it, opening "New document" straight
+   * after editing one would save the new text OVER the document just edited —
+   * the form would look empty while still pointing at it.
+   */
+  const startNewDocument = () => {
+    setEditingId(null);
+    setDocTitle('');
+    setDocContent('');
+    setDocCategory('Template');
+    setDocSection('tenant-onboarding');
+    setDocCountry('ALL');
+    setPublishStatus('draft');
+    setPreviewMode(false);
+    setViewMode('creator');
+    requestAnimationFrame(() => {
+      if (editorRef.current) editorRef.current.innerHTML = '';
+    });
+  };
 
   const handleSaveDocument = async () => {
     if(!docTitle || !docContent.trim()) {
@@ -164,10 +275,22 @@ const FileLibrary: React.FC = () => {
       const file = new File([blob], `${documentName}.html`, { type: 'text/html' });
       
       const isPublished = publishStatus === 'publish';
-      await uploadDocument(file, documentName, docCategory, docSystemId, isPublished);
+
+      if (editingId) {
+        /*
+         * Edit in place. Uploading a replacement would leave the original row
+         * behind — the create endpoint creates unconditionally — so landlords
+         * would see the template twice with the stale copy still live. The
+         * backend records what the document said before as a version.
+         */
+        await updateDocumentContent(editingId, previewDoc);
+      } else {
+        await uploadDocument(file, documentName, docCategory, docSystemId, isPublished);
+      }
       await loadFiles(); // Refresh files
       
       setViewMode('list');
+      setEditingId(null);
       // Reset form
       setDocTitle('');
       setDocContent('');
@@ -175,7 +298,7 @@ const FileLibrary: React.FC = () => {
       setDocSection('tenant-onboarding');
       setDocCountry('ALL');
       setPublishStatus('draft');
-      alert('Document saved successfully!');
+      alert(editingId ? 'Document updated. The previous version was kept.' : 'Document saved successfully!');
     } catch (error: any) {
       console.error('Error saving document:', error);
       alert(`Error saving document: ${error.message || 'Please try again'}`);
@@ -218,10 +341,16 @@ const FileLibrary: React.FC = () => {
       <div className="h-[calc(100vh-100px)] flex flex-col animate-in fade-in slide-in-from-bottom-4">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <button onClick={() => setViewMode('list')} className="p-2 bg-white/40 hover:bg-white/80 rounded-xl transition-colors"><ChevronLeft size={24} className="text-gray-600" /></button>
+            <button onClick={() => { setEditingId(null); setViewMode('list'); }} className="p-2 bg-white/40 hover:bg-white/80 rounded-xl transition-colors"><ChevronLeft size={24} className="text-gray-600" /></button>
             <div>
-              <h2 className="text-3xl font-bold text-gray-800 tracking-tight">Document Creator</h2>
-              <p className="text-gray-600 text-sm font-medium">Create new resources for the Asher Library.</p>
+              <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
+                {editingId ? 'Editing a published document' : 'Document Creator'}
+              </h2>
+              <p className="text-gray-600 text-sm font-medium">
+                {editingId
+                  ? 'Saving replaces what landlords and tenants read. The current text is kept as a version.'
+                  : 'Create new resources for the Asher Library.'}
+              </p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -454,7 +583,7 @@ const FileLibrary: React.FC = () => {
                   <ChevronDown size={16} className="absolute right-4 top-3.5 text-gray-400 pointer-events-none"/>
                </div>
             </div>
-            <button onClick={() => setViewMode('creator')} className="px-6 py-3 bg-red-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:bg-red-700 transition hover:shadow-red-500/30">
+            <button onClick={() => { startNewDocument(); }} className="px-6 py-3 bg-red-600 text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg hover:bg-red-700 transition hover:shadow-red-500/30">
                <Plus size={20} />Create Doc
             </button>
          </div>
@@ -510,7 +639,8 @@ const FileLibrary: React.FC = () => {
                                  <td className="p-4"><span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${file.status === 'Published' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{file.status}</span></td>
                                  <td className="p-4 text-right">
                                     <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                       <button onClick={() => void updateDocumentStatus(file.id, file.status !== 'Published').then(loadFiles).catch((e) => setLoadError(e?.message || 'Publish status could not be updated.'))} className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-red-600 hover:bg-white rounded-xl transition">{file.status === 'Published' ? 'Unpublish' : 'Publish'}</button>
+                                       <button onClick={() => void handleEditDocument(file)} disabled={loadingDoc || !file.url} className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-red-600 hover:bg-white rounded-xl transition disabled:opacity-40">Edit</button>
+                                    <button onClick={() => void updateDocumentStatus(file.id, file.status !== 'Published').then(loadFiles).catch((e) => setLoadError(e?.message || 'Publish status could not be updated.'))} className="px-3 py-2 text-xs font-bold text-gray-600 hover:text-red-600 hover:bg-white rounded-xl transition">{file.status === 'Published' ? 'Unpublish' : 'Publish'}</button>
                                        <button
                                           onClick={() => file.url && window.open(file.url, '_blank', 'noopener,noreferrer')}
                                           disabled={!file.url}

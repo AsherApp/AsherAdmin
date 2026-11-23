@@ -138,6 +138,49 @@ export interface DocumentMeta {
 }
 
 /**
+ * The writing inside a stored document, free of whatever shell it arrived in.
+ *
+ * Stored content is not one shape. A document the engine rendered is a whole
+ * HTML file; a landlord's saved edit is a fragment out of a rich-text editor;
+ * an older record carries a `doc-shell` wrapper and a stylesheet of its own;
+ * one saved by the old cover designer has a styled cover baked into it. All of
+ * them have to come out as a bare body, or the shells nest and the document
+ * renders with two covers and three stylesheets.
+ *
+ * Anything that reads a stored document back — to show it, to print it, or to
+ * open it in an editor — needs this, which is why it is here rather than in
+ * one app.
+ */
+export function documentBodyOf(stored: string): string {
+  const source = String(stored ?? '');
+  const bodyMatch = source.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const inner = (bodyMatch?.[1] ?? source).trim();
+
+  return inner
+    // An engine document wraps its flow in <main id="flow">; take what is inside.
+    .replace(/^[\s\S]*?<main id="flow">([\s\S]*)<\/main>[\s\S]*$/i, '$1')
+    /*
+     * A cover belongs to the shell, and the shell is drawn fresh each time —
+     * both the engine's own `<section class="sheet cover">` and the older baked
+     * `<section class="cover cover-plain">` that a cover designer used to write
+     * into stored content, Asher's mark and all. Leaving either in would render
+     * a second, unstyled cover in the middle of the body.
+     */
+    .replace(/<section\b[^>]*\bclass=["'][^"']*\bcover\b[^"']*["'][^>]*>[\s\S]*?<\/section>/gi, '')
+    /*
+     * Sheets, contents and footers are NOT stripped, because stored content
+     * never holds them: pagination runs in the browser, after this HTML is
+     * written. Stripping on a guess would mean deleting real writing from any
+     * document that happened to use one of those class names.
+     */
+    // Legacy wrappers, with the stylesheets and scripts that came with them.
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<\/?div\b[^>]*class="[^"]*(?:doc-shell|doc-body|doc-page|agreement-document-(?:shell|paper|body))[^"]*"[^>]*>/gi, '')
+    .trim();
+}
+
+/**
  * A document's kind, from its title.
  *
  * Kind is routing metadata, and the one thing it decides about the document is

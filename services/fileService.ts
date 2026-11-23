@@ -134,6 +134,38 @@ export const getDocuments = async (): Promise<Document[]> => {
   return [];
 };
 
+/**
+ * Replace a library document's text, keeping what it said before.
+ *
+ * Editing a published Asher template had no path at all: the only route was to
+ * upload a replacement under the same name, and the create endpoint creates
+ * unconditionally — so that left TWO rows and landlords saw the template
+ * twice, the stale copy still live. The backend records the content that was
+ * live as a version and points the document at the new one.
+ */
+export const updateDocumentContent = async (
+  documentId: string,
+  content: string
+): Promise<Document> => {
+  const response = await api.patch(`/admin/documents/${documentId}/content`, { content });
+  return response.data.data;
+};
+
+/** Earlier versions of a library document's content, newest first. */
+export const getDocumentVersions = async (
+  documentId: string
+): Promise<Array<{
+  id: string;
+  version: number;
+  documentUrl: string;
+  size: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+}>> => {
+  const response = await api.get(`/admin/documents/${documentId}/versions`);
+  return response.data.data;
+};
+
 export const updateDocumentStatus = async (documentId: string, isPublished: boolean): Promise<Document> => {
   const response = await api.patch(`/admin/documents/${documentId}/status`, { isPublished });
   return response.data || response;
