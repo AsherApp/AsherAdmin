@@ -73,11 +73,14 @@ export function connectAdminNotifications(userId: string, token: string): Socket
 
   unbindDataRuntime?.();
   unbindDataRuntime = dataRuntime.bindSocket(socket);
+  // Also runs on every reconnection: the Socket re-emits 'connect' each time
+  // it attaches. ('reconnect' is a Manager event in socket.io v4, so a Socket
+  // listener for it never fires at all.) dataRuntime.bindSocket hooks the same
+  // 'connect' to resume its watchers, which is what refreshes admin screens.
   socket.on('connect', () => {
     joinRooms(userId);
     notifyStatus();
   });
-  socket.on('reconnect', () => joinRooms(userId));
   socket.on('disconnect', () => notifyStatus());
   socket.on('notification', (payload: Record<string, unknown>) => notify(payload));
   socket.on('payment_notification', (payload: Record<string, unknown>) => notify(payload));
