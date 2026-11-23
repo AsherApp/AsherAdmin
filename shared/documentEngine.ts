@@ -472,6 +472,14 @@ export const DOCUMENT_CSS = `
   .checklist td:first-child { width: 28px; text-align: center; }
   .violation-table td:first-child { width: 28%; font-weight: 700; }
   .pdf-blank { display: inline-block; min-width: 7em; border-bottom: 1px solid var(--ink); height: .95em; }
+  /* Names the sender above a coverless fragment. See documentSenderHeading. */
+  .doc-sender {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 10px; padding: 0 4px;
+    font: 600 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: .04em; text-transform: uppercase; color: #4b5563;
+  }
+  .doc-sender-logo { width: 22px; height: 22px; object-fit: contain; }
   .sig-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 26px 0; margin-top: 26px; }
   .sig-grid > * { display: table-cell; vertical-align: top; width: 50%; }
   .sig-line { border-top: 1px solid var(--ink); margin-top: 44px; padding-top: 6px; font-size: ${DOC.size.micro}; color: var(--muted); }
@@ -1002,6 +1010,31 @@ ${scopedDocumentCss()}
 </head>
 <body class="${DOCUMENT_SCOPE}">${coverSheet(meta)}</body>
 </html>`;
+}
+
+/**
+ * Whose document this is, for a fragment.
+ *
+ * A fragment has no cover, so nothing in it says who sent the document — and
+ * a fragment is what every signing surface shows, because a signature zone has
+ * to be tappable and clickable rather than shrunk to fit A4. On a printed copy
+ * naming the sender is the cover's job; here it is this.
+ *
+ * It lives in the engine rather than in each app because it was written in the
+ * tenant app alone, which meant the same agreement named its landlord on a
+ * phone and came from nobody in a browser.
+ *
+ * Pass it INSIDE `documentFragmentHtml`'s body. The sheet is scoped, so every
+ * rule is prefixed with the wrapper: a heading placed before the wrapper is
+ * outside the scope and gets none of its styling.
+ */
+export function documentSenderHeading(brand?: DocumentBrand | null): string {
+  if (!brand?.name) return '';
+  const name = escapeHtml(brand.name);
+  const logo = brand.logoSrc
+    ? `<img class="doc-sender-logo" src="${escapeHtml(brand.logoSrc)}" alt="" />`
+    : '';
+  return `<header class="doc-sender">${logo}<span>${name}</span></header>`;
 }
 
 /**
