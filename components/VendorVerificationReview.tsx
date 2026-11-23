@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { watchData } from '../services/dataRuntime';
 import { ShieldCheck, Loader, Check, X, ExternalLink, RefreshCw } from 'lucide-react';
 import {
   approveVendorVerification,
@@ -37,8 +38,8 @@ const VendorVerificationReview: React.FC = () => {
   const [rejectingVendorId, setRejectingVendorId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
-  const loadPending = useCallback(async () => {
-    setLoading(true);
+  const loadPending = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     setError('');
     try {
       const data = await getPendingVendorVerifications();
@@ -56,6 +57,18 @@ const VendorVerificationReview: React.FC = () => {
   useEffect(() => {
     void loadPending();
   }, [loadPending]);
+
+  // Vendor verification submissions arrive while this list is open.
+  useEffect(
+    () =>
+      watchData({
+        key: 'admin:vendor-verifications',
+        domain: 'verification',
+        immediate: false,
+        load: () => loadPending({ silent: true }),
+      }),
+    [loadPending]
+  );
 
   const handleApprove = async (vendorId: string) => {
     setActionId(vendorId);

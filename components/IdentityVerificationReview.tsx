@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { watchData } from '../services/dataRuntime';
 import { ShieldCheck, Loader, Check, X, RefreshCw } from 'lucide-react';
 import {
   approveLandlordIdentity,
@@ -42,8 +43,8 @@ const IdentityVerificationReview: React.FC = () => {
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     setError('');
     try {
       const data = await getIdentityVerifications(list);
@@ -61,6 +62,19 @@ const IdentityVerificationReview: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // An approval or rejection elsewhere (or by another admin) used to sit here
+  // unseen until the page was reloaded by hand.
+  useEffect(
+    () =>
+      watchData({
+        key: `admin:identity-verifications:${list}`,
+        domain: 'verification',
+        immediate: false,
+        load: () => load({ silent: true }),
+      }),
+    [load, list]
+  );
 
   const handleApprove = async (landlordId: string) => {
     setActionId(landlordId);
